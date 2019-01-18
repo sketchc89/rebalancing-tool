@@ -1,4 +1,7 @@
 use std::f64;
+use std::io;
+use std::io::Write;
+
 #[test]
 fn portfolio_value_is_positive() {
     let value = "-1";
@@ -47,12 +50,30 @@ fn parse_portfolio_value
     }
 }
 
+fn get_portfolio_value (name: &str) -> f64 {
+    let value:f64 = loop {
+        print!("Input the value of your {} investment account: ", name);
+        io::stdout().flush().unwrap();
+        let mut val = String::new();
+        io::stdin().read_line(&mut val)
+            .expect("Failed to read line");
+        match parse_portfolio_value(&val) {
+            Ok(num) => break num,
+            Err(_) => {
+                println!("Invalid input.");
+                continue;
+            }
+        };
+    };
+    return value;
+}
+
 fn main() {
-    println!("Hello, world!");
 
-/*    let mut taxable_value = String::new();
-
-    io::stdin().read_line(&mut taxable_value)
-        .expect("Failed to read line");
-    println!("Your taxable investment accout is worth ${}", taxable_value);*/
+    let taxable = get_portfolio_value("taxable");
+    let traditional = get_portfolio_value("401k");
+    let roth = get_portfolio_value("Roth");
+    println!("Your taxable investment accout is worth ${}", taxable);
+    println!("Your traditional investment accout is worth ${}", traditional);
+    println!("Your roth investment accout is worth ${}", roth);
 }
