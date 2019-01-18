@@ -1,40 +1,7 @@
-use std::num::ParseFloatError;
-use std::error::Error;
-use std::fmt;
-//use std::io;
-
-#[derive(Debug)]
-struct NegRangeError {
-    details: String
-}
-
-impl NegRangeError {
-    fn new(msg: &str) -> NegRangeError {
-        NegRangeError{details: msg.to_string()}
-    }
-}
-
-impl fmt::Display for NegRangeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.details)
-    }
-}
-
-impl Error for NegRangeError {
-    fn description(&self) -> &str {
-        &self.details
-    }
-}
-
-impl From<ParseFloatError> for NegRangeError {
-    fn from(err: ParseFloatError) -> Self {
-        NegRangeError::new(err.description())
-    }
-}
-
+use std::f64;
 #[test]
 fn portfolio_value_is_positive() {
-    let value = String::from("-1");
+    let value = "-1";
     match parse_portfolio_value(value) {
         Ok(_) => panic!("Negative values should return an error"),
         Err(_) => assert!(true)
@@ -43,7 +10,7 @@ fn portfolio_value_is_positive() {
 
 #[test]
 fn portfolio_value_matches_input() {
-    let value = String::from("1.23");
+    let value = "1.23";
     let val: f64 = 1.23;
     let res = match parse_portfolio_value(value) {
         Ok(num) => num,
@@ -54,7 +21,7 @@ fn portfolio_value_matches_input() {
 
 #[test]
 fn portfolio_value_is_rounded_to_cents() {
-    let value = String::from("1.234");
+    let value = "1.234";
     let val: f64 = 1.23;
     let res = match parse_portfolio_value(value) {
         Ok(num) => num,
@@ -63,15 +30,20 @@ fn portfolio_value_is_rounded_to_cents() {
     assert_eq!(res, val, "Result should round to two decimal places");
 }
 
+#[test]
+fn portfolio_value_fails_to_parse_letters() {
+    let value = "abc";
+    assert!(parse_portfolio_value(value).is_err());
+}
+
 fn parse_portfolio_value
-    (value: String) 
-    -> Result<f64, NegRangeError> {
-    let value: f64 = value.trim().parse()
-        .expect("Input must be a positive number");
-    if value < 0.0 {
-        Err(NegRangeError::new("Portfolio value must be positive"))
-    } else {
+    (value: &str) 
+    -> Result<f64, &str> {
+    let value: f64 = value.trim().parse().unwrap_or(-1.0);
+    if value > 0.0 {
         Ok((value*100.0).round()/100.0)
+    } else {
+        Err("Input must be a positive number")
     }
 }
 
