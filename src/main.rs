@@ -1,6 +1,8 @@
 use std::f64;
 use std::io;
 use std::io::Write;
+use gtk::*;
+use gtk::WidgetExt;
 
 #[test]
 fn portfolio_value_is_positive() {
@@ -76,4 +78,19 @@ fn main() {
     println!("Your taxable investment accout is worth ${}", taxable);
     println!("Your traditional investment accout is worth ${}", traditional);
     println!("Your roth investment accout is worth ${}", roth);
+    if gtk::init().is_err() {
+        panic!("Failed to initialize GTK");
+    }
+    let glade_src = include_str!("builder_basics.glade");
+    let builder = gtk::Builder::new_from_string(glade_src);
+    let window: gtk::Window = builder.get_object("window1").unwrap();
+    let button: gtk::Button = builder.get_object("button1").unwrap();
+    let dialog: gtk::MessageDialog = builder.get_object("messagedialog1").unwrap();
+    button.connect_clicked(move |_| {
+        dialog.run();
+        dialog.hide();
+    });
+    window.show_all();
+    gtk::main();
+
 }

@@ -5,3 +5,7 @@ authors = ["Chris Sketch <sketchc89@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+
+[dependencies.gtk]
+version = "0.5"
+features = ["v3_22"]
