@@ -1,8 +1,57 @@
 use std::f64;
 use std::io;
 use std::io::Write;
-use gtk::*;
-use gtk::WidgetExt;
+//use gtk::*;
+//use gtk::WidgetExt;
+
+struct Account {
+    classification: AccountType,
+    asset_allocation: AssetAllocation,
+}
+
+struct Asset {
+    class: AssetClass,
+    value: f64
+}
+
+impl Account {
+    fn get_value(&self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.asset_allocation.assets {
+            x += i.value;
+        }
+        return x;
+    }
+}
+
+struct AssetAllocation {
+    assets: Vec<Asset>
+}
+
+impl AssetAllocation {
+    fn new() -> AssetAllocation {
+        AssetAllocation { assets: Vec::new(), }
+    }
+    fn add_asset(&mut self, asset: Asset) {
+        self.assets.push(asset);
+    }
+}
+
+
+enum AccountType {
+    Traditional,
+    Taxable,
+    Roth,
+    Educational
+}
+
+enum AssetClass {
+    Domestic,
+    International,
+    Bond,
+    Cd,
+    RealEstate
+}
 
 #[test]
 fn portfolio_value_is_positive() {
@@ -41,6 +90,25 @@ fn portfolio_value_fails_to_parse_letters() {
     assert!(parse_portfolio_value(value).is_err());
 }
 
+#[test]
+fn get_total_account_value() {
+    let mut account  = Account {
+        classification: AccountType::Taxable,
+        asset_allocation: AssetAllocation::new(),
+    };
+    let domestic = Asset {
+        class: AssetClass::Domestic,
+        value: 50.00,
+    };
+    let intl = Asset {
+        class: AssetClass::International,
+        value: 50.00,
+    };
+    account.asset_allocation.add_asset(domestic);
+    account.asset_allocation.add_asset(intl);
+    assert_eq!(100.00, account.get_value());
+}
+
 fn parse_portfolio_value
     (value: &str) 
     -> Result<f64, &str> {
@@ -75,10 +143,22 @@ fn main() {
     let taxable = get_portfolio_value("taxable");
     let traditional = get_portfolio_value("401k");
     let roth = get_portfolio_value("Roth");
+    let taxable_domestic = Asset {
+        class: AssetClass::Domestic,
+        value: taxable,
+    };
+    let taxable_portfolio = AssetAllocation {
+        assets: vec![taxable_domestic],
+    };
+    let taxable_account = Account {
+        classification: AccountType::Taxable,
+        asset_allocation: taxable_portfolio
+    };
+
     println!("Your taxable investment accout is worth ${}", taxable);
     println!("Your traditional investment accout is worth ${}", traditional);
     println!("Your roth investment accout is worth ${}", roth);
-    if gtk::init().is_err() {
+    /*if gtk::init().is_err() {
         panic!("Failed to initialize GTK");
     }
     let glade_src = include_str!("builder_basics.glade");
@@ -91,6 +171,6 @@ fn main() {
         dialog.hide();
     });
     window.show_all();
-    gtk::main();
+    gtk::main();*/
 
 }
