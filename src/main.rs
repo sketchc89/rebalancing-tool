@@ -22,6 +22,9 @@ impl Account {
         }
         return x;
     }
+    fn is_empty(&self) -> bool {
+        return self.asset_allocation.assets.is_empty()
+    }
 }
 
 struct AssetAllocation {
@@ -107,6 +110,15 @@ fn get_total_account_value() {
     account.asset_allocation.add_asset(domestic);
     account.asset_allocation.add_asset(intl);
     assert_eq!(100.00, account.get_value());
+}
+
+#[test]
+fn checks_account_is_empty() {
+    let mut account = Account {
+        classification: AccountType::Taxable,
+        asset_allocation: AssetAllocation::new(),
+    };
+    assert!(account.is_empty());
 }
 
 fn parse_portfolio_value
