@@ -6,7 +6,16 @@ use std::io::Write;
 
 struct Account {
     classification: AccountType,
-    asset_allocation: AssetAllocation,
+    assets: Vec<Asset>
+}
+
+#[derive(PartialEq)]
+enum AssetClass {
+    Domestic,
+    International,
+    Bond,
+    Cd,
+    RealEstate,
 }
 
 struct Asset {
@@ -15,45 +24,42 @@ struct Asset {
 }
 
 impl Account {
-    fn get_value(&self) -> f64 {
-        let mut x = 0.0;
-        for i in &self.asset_allocation.assets {
-            x += i.value;
+    fn new(a_type: AccountType) -> Account {
+        Account { 
+            classification: a_type,
+            assets: Vec::new(), 
         }
-        return x;
-    }
-    fn is_empty(&self) -> bool {
-        return self.asset_allocation.assets.is_empty()
-    }
-}
-
-struct AssetAllocation {
-    assets: Vec<Asset>
-}
-
-impl AssetAllocation {
-    fn new() -> AssetAllocation {
-        AssetAllocation { assets: Vec::new(), }
     }
     fn add_asset(&mut self, asset: Asset) {
         self.assets.push(asset);
     }
-}
+    fn get_value(&self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            x = x + i.value;
+        }
+        return x;
+    }
+    fn is_empty(&self) -> bool {
+        return self.assets.is_empty()
+    }
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return x / self.get_value();
+    }
 
+}
 
 enum AccountType {
     Traditional,
     Taxable,
     Roth,
     Educational
-}
-
-enum AssetClass {
-    Domestic,
-    International,
-    Bond,
-    Cd,
-    RealEstate
 }
 
 #[test]
@@ -95,10 +101,7 @@ fn portfolio_value_fails_to_parse_letters() {
 
 #[test]
 fn get_total_account_value() {
-    let mut account  = Account {
-        classification: AccountType::Taxable,
-        asset_allocation: AssetAllocation::new(),
-    };
+    let mut account  = Account::new(AccountType::Taxable);
     let domestic = Asset {
         class: AssetClass::Domestic,
         value: 50.00,
@@ -107,18 +110,44 @@ fn get_total_account_value() {
         class: AssetClass::International,
         value: 50.00,
     };
-    account.asset_allocation.add_asset(domestic);
-    account.asset_allocation.add_asset(intl);
+    account.add_asset(domestic);
+    account.add_asset(intl);
     assert_eq!(100.00, account.get_value());
 }
 
 #[test]
-fn checks_account_is_empty() {
-    let mut account = Account {
-        classification: AccountType::Taxable,
-        asset_allocation: AssetAllocation::new(),
+fn get_asset_allocation_by_asset_type() {
+    let mut account  = Account::new(AccountType::Taxable);
+    let domestic = Asset {
+        class: AssetClass::Domestic,
+        value: 600.00,
     };
+    let intl = Asset {
+        class: AssetClass::International,
+        value: 400.00,
+    };
+    account.add_asset(domestic);
+    account.add_asset(intl);
+    assert_eq!(0.6, account.get_asset_share(AssetClass::Domestic));
+    println!("goodbye cruel world:");
+    assert_eq!(0.4, account.get_asset_share(AssetClass::International));
+}
+
+#[test]
+fn checks_account_is_empty() {
+    let account  = Account::new(AccountType::Taxable);
     assert!(account.is_empty());
+}
+
+#[test]
+fn check_account_is_not_empty() {
+    let mut account  = Account::new(AccountType::Taxable);
+    let domestic = Asset {
+        class: AssetClass::Domestic,
+        value: 50.00,
+    };
+    account.add_asset(domestic);
+    assert!(!account.is_empty());
 }
 
 fn parse_portfolio_value
@@ -152,22 +181,30 @@ fn get_portfolio_value (name: &str) -> f64 {
 
 fn main() {
 
-    let taxable = get_portfolio_value("taxable");
+    let taxable_dom = get_portfolio_value("taxable domestic");
+    let taxable_intl = get_portfolio_value("taxable international");
     let traditional = get_portfolio_value("401k");
     let roth = get_portfolio_value("Roth");
     let taxable_domestic = Asset {
         class: AssetClass::Domestic,
-        value: taxable,
+        value: taxable_dom,
     };
-    let taxable_portfolio = AssetAllocation {
-        assets: vec![taxable_domestic],
+    let taxable_international = Asset {
+        class: AssetClass::International,
+        value: taxable_intl,
     };
-    let taxable_account = Account {
-        classification: AccountType::Taxable,
-        asset_allocation: taxable_portfolio
-    };
+    let mut taxable_portfolio = Account::new(AccountType::Taxable);
+    taxable_portfolio.add_asset(taxable_domestic);
+    taxable_portfolio.add_asset(taxable_international);
 
-    println!("Your taxable investment accout is worth ${}", taxable);
+    if !taxable_portfolio.is_empty() {
+        println!("Your taxable investment accout is worth ${}", 
+                 taxable_portfolio.get_value());
+        println!("Your taxable investment account is {}% domestic", 
+                 100.0*taxable_portfolio.get_asset_share(AssetClass::Domestic));
+        println!("Your taxable investment account is {}% international", 
+                 100.0*taxable_portfolio.get_asset_share(AssetClass::International));
+    }
     println!("Your traditional investment accout is worth ${}", traditional);
     println!("Your roth investment accout is worth ${}", roth);
     /*if gtk::init().is_err() {
