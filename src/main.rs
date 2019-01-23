@@ -1,6 +1,7 @@
 use std::f64;
 use std::io;
 use std::io::Write;
+use std::cmp::Ordering;
 //use gtk::*;
 //use gtk::WidgetExt;
 
@@ -72,13 +73,13 @@ impl Allocation {
         }
         return x;
     }
-    fn is_valid_allocation(&mut self) -> Result<&Allocation, String> {
-        let x = self.get_allocated_amount();
-        if x != 100.0 {
-            let reason = format!("Allocation must sum to {}",  x);
-            return Err(reason);
+    fn is_valid_allocation(mut self) -> Ordering {
+        let i = self.get_allocated_amount().round() as i64;
+        match i.cmp(&100) {
+            Ordering::Equal => return Ordering::Equal,
+            Ordering::Less => return Ordering::Less,
+            Ordering::Greater => return Ordering::Greater,
         }
-        return Ok(self);
     }
         
 }
@@ -157,7 +158,6 @@ fn get_asset_allocation_by_asset_type() {
     account.add_asset(domestic);
     account.add_asset(intl);
     assert_eq!(0.6, account.get_asset_share(AssetClass::Domestic));
-    println!("goodbye cruel world:");
     assert_eq!(0.4, account.get_asset_share(AssetClass::International));
 }
 
@@ -181,7 +181,6 @@ fn check_account_is_not_empty() {
 #[test]
 fn desired_asset_allocation_sums_to_100() {
     let mut target_allocation = Allocation::new();
-    let mut allocated = 0.0;
     let dom = Asset {
         class: AssetClass::Domestic,
         value: 35.0,
@@ -198,8 +197,9 @@ fn desired_asset_allocation_sums_to_100() {
     target_allocation.allocate(intl);
     target_allocation.allocate(bond);
     match target_allocation.is_valid_allocation() {
-        Ok(_) => assert!(true),
-        Err(why) => panic!("{:?}", why),
+        Ordering::Equal => assert!(true),
+        Ordering::Less => panic!("Allocation sums to 100 but returned less"),
+        Ordering::Greater => panic!("Allocation sums to 100 but returned greater"),
     }
 }
 
@@ -223,8 +223,35 @@ fn allocation_complains_if_assets_dont_sum_to_100() {
     target_allocation.allocate(bond);
 
     match target_allocation.is_valid_allocation() {
-        Ok(_) => panic!("Asset allocation not equal to 100.0 should be invalid"),
-        Err(why) => assert!(true, "{}", why),
+        Ordering::Equal => panic!("Allocation should be less than 100 but returned equal"),
+        Ordering::Less => assert!(true),
+        Ordering::Greater => panic!("Allocation should be less than 100 but returned greater"),
+    }
+}
+
+#[test]
+fn allocation_says_whether_over_100() {
+    let mut target_allocation = Allocation::new();
+    let dom = Asset {
+        class: AssetClass::Domestic,
+        value: 100.0,
+    };
+    let intl = Asset {
+        class: AssetClass::International,
+        value: 200.0,
+    };
+    let bond = Asset {
+        class: AssetClass::Bond,
+        value: 300.0,
+    };
+    target_allocation.allocate(dom);
+    target_allocation.allocate(intl);
+    target_allocation.allocate(bond);
+
+    match target_allocation.is_valid_allocation() {
+        Ordering::Equal => panic!("Allocation is greater than 100 but returned equal"),
+        Ordering::Greater => assert!(true),
+        Ordering::Less => panic!("Allocation is less than 100 but returned less"),
     }
 }
 
@@ -259,6 +286,8 @@ fn get_portfolio_value (name: &str) -> f64 {
 
 fn main() {
 
+    let x: f64 = 2.5;
+    println!("{}", x.ceil());
     let taxable_dom = get_portfolio_value("taxable domestic");
     let taxable_intl = get_portfolio_value("taxable international");
     let traditional = get_portfolio_value("401k");
