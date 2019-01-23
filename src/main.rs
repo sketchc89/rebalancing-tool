@@ -9,6 +9,10 @@ struct Account {
     assets: Vec<Asset>
 }
 
+struct Allocation {
+    assets: Vec<Asset>
+}
+
 #[derive(PartialEq)]
 enum AssetClass {
     Domestic,
@@ -53,6 +57,16 @@ impl Account {
         return x / self.get_value();
     }
 
+}
+
+impl Allocation {
+    fn new() -> Allocation {
+        Allocation { assets: Vec::new() }
+    }
+    fn allocate(&mut self, asset: Asset) {
+        &mut self.assets.push(asset);
+    }
+        
 }
 
 enum AccountType {
@@ -148,6 +162,32 @@ fn check_account_is_not_empty() {
     };
     account.add_asset(domestic);
     assert!(!account.is_empty());
+}
+
+#[test]
+fn desired_asset_allocation_sums_to_100() {
+    let mut target_allocation = Allocation::new();
+    let mut allocated = 0.0;
+    let dom = Asset {
+        class: AssetClass::Domestic,
+        value: 35.0,
+    };
+    let intl = Asset {
+        class: AssetClass::International,
+        value: 25.0,
+    };
+    let bond = Asset {
+        class: AssetClass::Bond,
+        value: 40.0,
+    };
+    target_allocation.allocate(dom);
+    target_allocation.allocate(intl);
+    target_allocation.allocate(bond);
+    //target_allocation.get_total_allocated();
+    for i in target_allocation.assets {
+        allocated = allocated + i.value;
+    }
+    assert_eq!(allocated, 100.0);
 }
 
 fn parse_portfolio_value
