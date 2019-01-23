@@ -12,7 +12,6 @@ struct Account {
 struct Allocation {
     assets: Vec<Asset>
 }
-
 #[derive(PartialEq)]
 enum AssetClass {
     Domestic,
@@ -65,6 +64,21 @@ impl Allocation {
     }
     fn allocate(&mut self, asset: Asset) {
         &mut self.assets.push(asset);
+    }
+    fn get_allocated_amount(&mut self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            x = x + i.value;
+        }
+        return x;
+    }
+    fn is_valid_allocation(&mut self) -> Result<&Allocation, String> {
+        let x = self.get_allocated_amount();
+        if x != 100.0 {
+            let reason = format!("Allocation must sum to {}",  x);
+            return Err(reason);
+        }
+        return Ok(self);
     }
         
 }
@@ -183,11 +197,35 @@ fn desired_asset_allocation_sums_to_100() {
     target_allocation.allocate(dom);
     target_allocation.allocate(intl);
     target_allocation.allocate(bond);
-    //target_allocation.get_total_allocated();
-    for i in target_allocation.assets {
-        allocated = allocated + i.value;
+    match target_allocation.is_valid_allocation() {
+        Ok(_) => assert!(true),
+        Err(why) => panic!("{:?}", why),
     }
-    assert_eq!(allocated, 100.0);
+}
+
+#[test]
+fn allocation_complains_if_assets_dont_sum_to_100() {
+    let mut target_allocation = Allocation::new();
+    let dom = Asset {
+        class: AssetClass::Domestic,
+        value: 1.0,
+    };
+    let intl = Asset {
+        class: AssetClass::International,
+        value: 2.0,
+    };
+    let bond = Asset {
+        class: AssetClass::Bond,
+        value: 3.0,
+    };
+    target_allocation.allocate(dom);
+    target_allocation.allocate(intl);
+    target_allocation.allocate(bond);
+
+    match target_allocation.is_valid_allocation() {
+        Ok(_) => panic!("Asset allocation not equal to 100.0 should be invalid"),
+        Err(why) => assert!(true, "{}", why),
+    }
 }
 
 fn parse_portfolio_value
