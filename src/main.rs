@@ -9,9 +9,7 @@ struct Account {
     classification: AccountType,
     assets: Vec<Asset>
 }
-
-struct Allocation {
-    assets: Vec<Asset>
+struct Allocation { assets: Vec<Asset>
 }
 #[derive(PartialEq)]
 enum AssetClass {
@@ -20,6 +18,7 @@ enum AssetClass {
     Bond,
     Cd,
     RealEstate,
+    Invalid,
 }
 
 struct Asset {
@@ -73,7 +72,7 @@ impl Allocation {
         }
         return x;
     }
-    fn is_valid_allocation(mut self) -> Ordering {
+    fn is_valid_allocation(&mut self) -> Ordering {
         let i = self.get_allocated_amount().round() as i64;
         match i.cmp(&100) {
             Ordering::Equal => return Ordering::Equal,
@@ -255,6 +254,47 @@ fn allocation_says_whether_over_100() {
     }
 }
 
+fn request_allocation()-> Allocation {
+    let mut allocation = Allocation::new();
+    while true {
+        println!("Select the number of the asset class to allocate");
+        println!("1. Domestic\t2. International\t3. Bonds\t4. CDs\t5. Real Estate");
+        let mut class = String::new();
+        io::stdin().read_line(&mut class)
+            .expect("Failed to read line");
+        println!("Percent (0-100) to allocate to this asset");
+        println!("Already allocated {}%", allocation.get_allocated_amount());
+        let mut value = String::new();
+        io::stdin().read_line(&mut value)
+            .expect("Failed to read line");
+        let class: u8 = class.trim().parse().unwrap_or(0);
+        let value: f64 = value.trim().parse().unwrap_or(0.0);
+        let asset = Asset { 
+            class: match class {
+                0 => AssetClass::Invalid,
+                1 => AssetClass::Domestic,
+                2 => AssetClass::International,
+                3 => AssetClass::Bond,
+                4 => AssetClass::Cd,
+                5 => AssetClass::RealEstate,
+                _ => AssetClass::Invalid,
+            },
+            value: value
+        };
+        allocation.allocate(asset);
+        match allocation.is_valid_allocation() {
+            Ordering::Equal => break,
+            Ordering::Less => continue,
+            Ordering::Greater => { 
+                println!("You can't allocate more than 100%");
+                println!("You allocated {}%", allocation.get_allocated_amount());
+                allocation = Allocation::new(); 
+            },
+        }
+    }
+    return allocation;
+}
+
 fn parse_portfolio_value
     (value: &str) 
     -> Result<f64, &str> {
@@ -286,6 +326,7 @@ fn get_portfolio_value (name: &str) -> f64 {
 
 fn main() {
 
+    let allocation = request_allocation();
     let x: f64 = 2.5;
     println!("{}", x.ceil());
     let taxable_dom = get_portfolio_value("taxable domestic");
