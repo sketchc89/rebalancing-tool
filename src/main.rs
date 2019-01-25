@@ -2,14 +2,15 @@ use std::f64;
 use std::io;
 use std::io::Write;
 use std::cmp::Ordering;
+use std::fmt;
 //use gtk::*;
 //use gtk::WidgetExt;
 
 struct Account {
-    classification: AccountType,
-    assets: Vec<Asset>
+    classification: AccountType, assets: Vec<Asset>
 }
-struct Allocation { assets: Vec<Asset>
+struct Allocation { 
+    assets: Vec<Asset>
 }
 #[derive(PartialEq)]
 enum AssetClass {
@@ -81,6 +82,35 @@ impl Allocation {
         }
     }
         
+}
+
+impl fmt::Display for AssetClass {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            AssetClass::Domestic => write!(f, "U.S.A."),
+            AssetClass::International => write!(f, "International"),
+            AssetClass::Bond => write!(f, "Bonds"),
+            AssetClass::Cd => write!(f, "CDs"),
+            AssetClass::RealEstate => write!(f, "Real Estate"),
+            _ => write!(f, "Invalid"),
+        }
+    }
+}
+
+impl fmt::Display for Asset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Asset Class: {}\t{}%", self.class, self.value)
+    }
+}
+impl fmt::Display for Allocation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut disp = "Allocation\n".to_string();
+        for i in &self.assets {
+            disp.push_str(&format!("{}\n", i));
+        }
+        disp.push_str("\n");
+        write!(f, "{}", disp)
+    }
 }
 
 enum AccountType {
@@ -256,7 +286,7 @@ fn allocation_says_whether_over_100() {
 
 fn request_allocation()-> Allocation {
     let mut allocation = Allocation::new();
-    while true {
+    loop {
         println!("Select the number of the asset class to allocate");
         println!("1. Domestic\t2. International\t3. Bonds\t4. CDs\t5. Real Estate");
         let mut class = String::new();
@@ -327,8 +357,7 @@ fn get_portfolio_value (name: &str) -> f64 {
 fn main() {
 
     let allocation = request_allocation();
-    let x: f64 = 2.5;
-    println!("{}", x.ceil());
+    println!("{}", allocation);
     let taxable_dom = get_portfolio_value("taxable domestic");
     let taxable_intl = get_portfolio_value("taxable international");
     let traditional = get_portfolio_value("401k");
