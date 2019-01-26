@@ -6,8 +6,15 @@ use std::fmt;
 //use gtk::*;
 //use gtk::WidgetExt;
 
+struct User {
+    fname: String,
+    lname: String,
+    accounts: Vec<Account>
+}
+
 struct Account {
-    classification: AccountType, assets: Vec<Asset>
+    classification: AccountType, 
+    assets: Vec<Asset>
 }
 struct Allocation { 
     assets: Vec<Asset>
@@ -99,13 +106,48 @@ impl fmt::Display for AssetClass {
 
 impl fmt::Display for Asset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Asset Class: {}\t{}%", self.class, self.value)
+        write!(f, "{}", &format!("Asset Class: {:<9}\t{} ", self.value, self.class))
     }
 }
 impl fmt::Display for Allocation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut disp = "Allocation\n".to_string();
         for i in &self.assets {
+            disp.push_str(&format!("{}\n", i));
+        }
+        disp.push_str("\n");
+        write!(f, "{}", disp)
+    }
+}
+
+impl fmt::Display for AccountType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            AccountType::Traditional => write!(f, "IRA / 401(k)"),
+            AccountType::Roth => write!(f, "Roth IRA / Roth 401(k)"),
+            AccountType::Taxable => write!(f, "Brokerage Account"),
+            AccountType::Educational => write!(f, "529 / Educational"),
+        }
+    }
+}
+
+impl fmt::Display for Account {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut disp = "Account Classification: ".to_string();
+        disp.push_str(&format!("{}\n", self.classification));
+        for i in &self.assets {
+            disp.push_str(&format!("{}\n", i));
+        }
+        disp.push_str("\n");
+        write!(f, "{}", disp)
+    }
+}
+
+impl fmt::Display for User {
+    fn fmt(&self, f:  &mut fmt::Formatter) -> fmt::Result {
+        let mut disp = "Name: ".to_string();
+        disp.push_str(&format!("{} {}\n", self.fname, self.lname));
+        for i in &self.accounts {
             disp.push_str(&format!("{}\n", i));
         }
         disp.push_str("\n");
@@ -356,6 +398,7 @@ fn get_portfolio_value (name: &str) -> f64 {
 
 fn main() {
 
+    //println!("{}", &format!("{:a^20}", AssetClass::Domestic));
     let allocation = request_allocation();
     println!("{}", allocation);
     let taxable_dom = get_portfolio_value("taxable domestic");
@@ -375,12 +418,7 @@ fn main() {
     taxable_portfolio.add_asset(taxable_international);
 
     if !taxable_portfolio.is_empty() {
-        println!("Your taxable investment accout is worth ${}", 
-                 taxable_portfolio.get_value());
-        println!("Your taxable investment account is {}% domestic", 
-                 100.0*taxable_portfolio.get_asset_share(AssetClass::Domestic));
-        println!("Your taxable investment account is {}% international", 
-                 100.0*taxable_portfolio.get_asset_share(AssetClass::International));
+        println!("{}", taxable_portfolio); 
     }
     println!("Your traditional investment accout is worth ${}", traditional);
     println!("Your roth investment accout is worth ${}", roth);
