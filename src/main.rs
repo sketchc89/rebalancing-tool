@@ -94,19 +94,19 @@ impl Allocation {
 impl fmt::Display for AssetClass {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            AssetClass::Domestic => write!(f, "U.S.A."),
-            AssetClass::International => write!(f, "International"),
-            AssetClass::Bond => write!(f, "Bonds"),
-            AssetClass::Cd => write!(f, "CDs"),
-            AssetClass::RealEstate => write!(f, "Real Estate"),
-            _ => write!(f, "Invalid"),
+            AssetClass::Domestic => "U.S.A.".fmt(f),
+            AssetClass::International => "International".fmt(f),
+            AssetClass::Bond => "Bonds".fmt(f),
+            AssetClass::Cd => "CDs".fmt(f),
+            AssetClass::RealEstate => "Real Estate".fmt(f),
+            _ => "Invalid".fmt(f),
         }
     }
 }
 
 impl fmt::Display for Asset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &format!("Asset Class: {:<9}\t{} ", self.value, self.class))
+        write!(f, "{}", &format!("Asset Class: {:<15}{:>9}", self.class, self.value))
     }
 }
 impl fmt::Display for Allocation {
@@ -116,17 +116,17 @@ impl fmt::Display for Allocation {
             disp.push_str(&format!("{}\n", i));
         }
         disp.push_str("\n");
-        write!(f, "{}", disp)
+        disp.fmt(f)
     }
 }
 
 impl fmt::Display for AccountType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            AccountType::Traditional => write!(f, "IRA / 401(k)"),
-            AccountType::Roth => write!(f, "Roth IRA / Roth 401(k)"),
-            AccountType::Taxable => write!(f, "Brokerage Account"),
-            AccountType::Educational => write!(f, "529 / Educational"),
+            AccountType::Traditional => "IRA / 401(k)".fmt(f),
+            AccountType::Roth => "Roth IRA / Roth 401(k)".fmt(f),
+            AccountType::Taxable => "Brokerage Account".fmt(f),
+            AccountType::Educational => "529 / Educational".fmt(f),
         }
     }
 }
@@ -139,7 +139,7 @@ impl fmt::Display for Account {
             disp.push_str(&format!("{}\n", i));
         }
         disp.push_str("\n");
-        write!(f, "{}", disp)
+        disp.fmt(f)
     }
 }
 
@@ -151,7 +151,7 @@ impl fmt::Display for User {
             disp.push_str(&format!("{}\n", i));
         }
         disp.push_str("\n");
-        write!(f, "{}", disp)
+        disp.fmt(f)
     }
 }
 
