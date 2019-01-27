@@ -34,6 +34,13 @@ struct Asset {
     value: f64
 }
 
+trait HoldsAssets {
+    fn add_asset(&mut self, asset: Asset);
+    fn get_value(&self) -> f64;
+    fn is_empty(&self) -> bool;
+    fn get_asset_share(&self, class: AssetClass) -> f64;
+}
+
 impl Account {
     fn new(a_type: AccountType) -> Account {
         Account { 
@@ -41,6 +48,8 @@ impl Account {
             assets: Vec::new(), 
         }
     }
+}
+impl HoldsAssets for Account {
     fn add_asset(&mut self, asset: Asset) {
         for i in &mut self.assets {
             if i.class == asset.class {
@@ -77,15 +86,6 @@ impl Allocation {
     fn new() -> Allocation {
         Allocation { assets: Vec::new() }
     }
-    fn allocate(&mut self, asset: Asset) {
-        for i in &mut self.assets {
-            if i.class == asset.class {
-                i.value = i.value + asset.value;
-                return;
-            }
-        }
-        self.assets.push(asset)
-    }
     fn get_allocated_amount(&mut self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
@@ -101,8 +101,41 @@ impl Allocation {
             Ordering::Greater => return Ordering::Greater,
         }
     }
-        
+    fn allocate(&mut self, asset: Asset) { self.add_asset(asset); }
 }
+impl HoldsAssets for Allocation {
+    fn add_asset(&mut self, asset: Asset) {
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                i.value = i.value + asset.value;
+                return;
+            }
+        }
+        self.assets.push(asset)
+    }
+
+    fn get_value(&self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            x = x + i.value;
+        }
+        return x;
+    }
+    fn is_empty(&self) -> bool {
+        return self.assets.is_empty()
+    }
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return x / self.get_value();
+    }
+
+}
+
 
 impl fmt::Display for AssetClass {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
