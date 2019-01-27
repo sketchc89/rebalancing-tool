@@ -42,8 +42,15 @@ impl Account {
         }
     }
     fn add_asset(&mut self, asset: Asset) {
-        self.assets.push(asset);
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                i.value = i.value + asset.value;
+                return;
+            }
+        }
+        self.assets.push(asset)
     }
+
     fn get_value(&self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
@@ -71,7 +78,13 @@ impl Allocation {
         Allocation { assets: Vec::new() }
     }
     fn allocate(&mut self, asset: Asset) {
-        &mut self.assets.push(asset);
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                i.value = i.value + asset.value;
+                return;
+            }
+        }
+        self.assets.push(asset)
     }
     fn get_allocated_amount(&mut self) -> f64 {
         let mut x = 0.0;
