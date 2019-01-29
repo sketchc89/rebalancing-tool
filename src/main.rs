@@ -103,6 +103,20 @@ impl Allocation {
     }
     fn allocate(&mut self, asset: Asset) { self.add_asset(asset); }
 }
+
+impl User {
+    fn new(fname: &str, lname: &str) -> User {
+        User {
+            fname: fname.to_string(),
+            lname: lname.to_string(),
+            accounts: Vec::new(),
+        }
+    }
+    fn add_account(&mut self, account: Account) {
+        self.accounts.push(account);
+    }
+}
+
 impl HoldsAssets for Allocation {
     fn add_asset(&mut self, asset: Asset) {
         for i in &mut self.assets {
@@ -192,9 +206,9 @@ impl fmt::Display for Account {
 impl fmt::Display for User {
     fn fmt(&self, f:  &mut fmt::Formatter) -> fmt::Result {
         let mut disp = "Name: ".to_string();
-        disp.push_str(&format!("{} {}\n", self.fname, self.lname));
+        disp.push_str(&format!("{} {}", self.fname, self.lname));
         for i in &self.accounts {
-            disp.push_str(&format!("{}\n", i));
+            disp.push_str(&format!("\n{}\n", i));
         }
         disp.push_str("\n");
         disp.fmt(f)
@@ -441,16 +455,30 @@ fn get_portfolio_value (name: &str) -> f64 {
     };
     return value;
 }
+fn get_string (descriptor: &str) -> String {
+    print!("Input the value of your {}: ", descriptor);
+    io::stdout().flush().unwrap();
+    let mut val = String::new();
+    io::stdin().read_line(&mut val)
+        .expect("Failed to read line");
+    return val.trim().to_string();
+}
 
 fn main() {
 
     //println!("{}", &format!("{:a^20}", AssetClass::Domestic));
+    
+    let first = get_string("first name");
+    let last = get_string("first name");
+    let mut user = User::new(&first, &last);
     let allocation = request_allocation();
     println!("{}", allocation);
     let taxable_dom = get_portfolio_value("taxable domestic");
     let taxable_intl = get_portfolio_value("taxable international");
-    let traditional = get_portfolio_value("401k");
-    let roth = get_portfolio_value("Roth");
+    let traditional_dom = get_portfolio_value("401k domestic");
+    let traditional_intl = get_portfolio_value("401k international");
+    let roth_dom = get_portfolio_value("Roth domestic");
+    let roth_intl = get_portfolio_value("Roth international");
     let taxable_domestic = Asset {
         class: AssetClass::Domestic,
         value: taxable_dom,
@@ -459,15 +487,36 @@ fn main() {
         class: AssetClass::International,
         value: taxable_intl,
     };
-    let mut taxable_portfolio = Account::new(AccountType::Taxable);
-    taxable_portfolio.add_asset(taxable_domestic);
-    taxable_portfolio.add_asset(taxable_international);
+    let traditional_domestic = Asset {
+        class: AssetClass::Domestic,
+        value: traditional_dom,
+    };
+    let traditional_international = Asset {
+        class: AssetClass::International,
+        value: traditional_intl,
+    };
+    let roth_domestic = Asset {
+        class: AssetClass::Domestic,
+        value: roth_dom,
+    };
+    let roth_international = Asset {
+        class: AssetClass::International,
+        value: roth_intl,
+    };
+    let mut taxable_account = Account::new(AccountType::Taxable);
+    taxable_account.add_asset(taxable_domestic);
+    taxable_account.add_asset(taxable_international);
+    let mut traditional_account = Account::new(AccountType::Traditional);
+    traditional_account.add_asset(traditional_domestic);
+    traditional_account.add_asset(traditional_international);
+    let mut roth_account = Account::new(AccountType::Roth);
+    roth_account.add_asset(roth_domestic);
+    roth_account.add_asset(roth_international);
+    user.add_account(taxable_account);
+    user.add_account(traditional_account);
+    user.add_account(roth_account);
 
-    if !taxable_portfolio.is_empty() {
-        println!("{}", taxable_portfolio); 
-    }
-    println!("Your traditional investment accout is worth ${}", traditional);
-    println!("Your roth investment accout is worth ${}", roth);
+    println!("{}", user);
     /*if gtk::init().is_err() {
         panic!("Failed to initialize GTK");
     }
