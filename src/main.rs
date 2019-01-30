@@ -530,30 +530,16 @@ fn main() {
     let traditional_intl = get_portfolio_value("401k international");
     let roth_dom = get_portfolio_value("Roth domestic");
     let roth_intl = get_portfolio_value("Roth international");
-    let taxable_domestic = Asset {
-        class: AssetClass::Domestic,
-        value: taxable_dom,
-    };
-    let taxable_international = Asset {
-        class: AssetClass::International,
-        value: taxable_intl,
-    };
-    let traditional_domestic = Asset {
-        class: AssetClass::Domestic,
-        value: traditional_dom,
-    };
-    let traditional_international = Asset {
-        class: AssetClass::International,
-        value: traditional_intl,
-    };
-    let roth_domestic = Asset {
-        class: AssetClass::Domestic,
-        value: roth_dom,
-    };
-    let roth_international = Asset {
-        class: AssetClass::International,
-        value: roth_intl,
-    };
+    let edu_dom = get_portfolio_value("529 domestic");
+    let edu_intl = get_portfolio_value("529 international");
+    let taxable_domestic = Asset::new(AssetClass::Domestic, taxable_dom);
+    let taxable_international = Asset::new(AssetClass::International, taxable_intl);
+    let traditional_domestic = Asset::new(AssetClass::Domestic, traditional_dom);
+    let traditional_international = Asset::new(AssetClass::International, traditional_intl);
+    let roth_domestic = Asset::new(AssetClass::Domestic, roth_dom);
+    let roth_international = Asset::new(AssetClass::International, roth_intl);
+    let edu_domestic = Asset::new(AssetClass::Domestic, edu_dom);
+    let edu_international = Asset::new(AssetClass::International, edu_intl);
     let mut taxable_account = Account::new(AccountType::Taxable);
     taxable_account.add_asset(taxable_domestic);
     taxable_account.add_asset(taxable_international);
@@ -563,6 +549,9 @@ fn main() {
     let mut roth_account = Account::new(AccountType::Roth);
     roth_account.add_asset(roth_domestic);
     roth_account.add_asset(roth_international);
+    let mut edu_account = Account::new(AccountType::Educational);
+    edu_account.add_asset(edu_domestic);
+    edu_account.add_asset(edu_international);
     user.add_account(taxable_account);
     user.add_account(traditional_account);
     user.add_account(roth_account);
