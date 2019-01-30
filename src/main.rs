@@ -44,18 +44,18 @@ trait HoldsAssets {
 }
 
 impl Asset {
-    fn new(c: AssetClass, v: f64) -> Asset {
+    fn new(class: AssetClass, value: f64) -> Asset {
         Asset {
-            class: c,
-            value: v,
+            class,
+            value,
         }
     }
 }
 
 impl Account {
-    fn new(a_type: AccountType) -> Account {
+    fn new(classification: AccountType) -> Account {
         Account { 
-            classification: a_type,
+            classification,
             assets: Vec::new(), 
         }
     }
