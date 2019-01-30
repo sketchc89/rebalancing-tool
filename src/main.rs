@@ -9,7 +9,9 @@ use std::fmt;
 struct User {
     fname: String,
     lname: String,
-    accounts: Vec<Account>
+    accounts: Vec<Account>,
+    allocation: Allocation,
+    target: Allocation,
 }
 
 struct Account {
@@ -41,6 +43,15 @@ trait HoldsAssets {
     fn get_asset_share(&self, class: AssetClass) -> f64;
 }
 
+impl Asset {
+    fn new(c: AssetClass, v: f64) -> Asset {
+        Asset {
+            class: c,
+            value: v,
+        }
+    }
+}
+
 impl Account {
     fn new(a_type: AccountType) -> Account {
         Account { 
@@ -49,6 +60,7 @@ impl Account {
         }
     }
 }
+
 impl HoldsAssets for Account {
     fn add_asset(&mut self, asset: Asset) {
         for i in &mut self.assets {
@@ -110,10 +122,47 @@ impl User {
             fname: fname.to_string(),
             lname: lname.to_string(),
             accounts: Vec::new(),
+            allocation: Allocation::new(),
+            target: Allocation::new(),
         }
     }
     fn add_account(&mut self, account: Account) {
         self.accounts.push(account);
+        self.current_allocation();
+    }
+    fn target_allocation(&mut self, allocation: Allocation) {
+        self.target = allocation;
+    }
+    fn current_allocation(&mut self) {
+        let mut dom = 0.0;
+        let mut int = 0.0;
+        let mut bnd = 0.0;
+        let mut cds = 0.0;
+        let mut rle = 0.0;
+        let mut inv = 0.0;
+        for i in &self.accounts {
+            dom += i.get_asset_share(AssetClass::Domestic);
+            int += i.get_asset_share(AssetClass::International);
+            bnd += i.get_asset_share(AssetClass::Bond);
+            cds += i.get_asset_share(AssetClass::Cd);
+            rle += i.get_asset_share(AssetClass::RealEstate);
+            inv += i.get_asset_share(AssetClass::Invalid);
+        }
+        let total = dom + int + bnd + cds + rle + inv;
+        let mut cur = Allocation::new();
+        let dom = Asset::new(AssetClass::Domestic, dom*100.0/total);
+        let int = Asset::new(AssetClass::International, int*100.0/total);
+        let bnd = Asset::new(AssetClass::Bond, bnd*100.0/total);
+        let cds = Asset::new(AssetClass::Cd, cds*100.0/total);
+        let rle = Asset::new(AssetClass::RealEstate, rle*100.0/total);
+        let inv = Asset::new(AssetClass::Invalid, inv*100.0/total);
+        cur.allocate(dom);
+        cur.allocate(int);
+        cur.allocate(bnd);
+        cur.allocate(cds);
+        cur.allocate(rle);
+        cur.allocate(inv);
+        self.allocation = cur;
     }
 }
 
@@ -210,7 +259,8 @@ impl fmt::Display for User {
         for i in &self.accounts {
             disp.push_str(&format!("\n{}\n", i));
         }
-        disp.push_str("\n");
+        disp.push_str(&format!("Target {}\n", self.target));
+        disp.push_str(&format!("Current {}\n", self.allocation));
         disp.fmt(f)
     }
 }
@@ -455,6 +505,7 @@ fn get_portfolio_value (name: &str) -> f64 {
     };
     return value;
 }
+
 fn get_string (descriptor: &str) -> String {
     print!("Input the value of your {}: ", descriptor);
     io::stdout().flush().unwrap();
@@ -515,6 +566,7 @@ fn main() {
     user.add_account(taxable_account);
     user.add_account(traditional_account);
     user.add_account(roth_account);
+    user.target_allocation(allocation);
 
     println!("{}", user);
     /*if gtk::init().is_err() {
