@@ -60,7 +60,6 @@ impl Account {
     fn get_asset_value(&self, class: AssetClass) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
-            println!("Get asset value {}", i.value);
             if i.class == class {
                 x = x + i.value;
             }
@@ -169,7 +168,6 @@ impl User {
         for i in &self.accounts {
             dom += i.get_asset_value(AssetClass::Domestic);
             int += i.get_asset_value(AssetClass::International);
-            println!("Account {}\nDomestic {}\n International {}\n", i.classification, dom, int);
             bnd += i.get_asset_value(AssetClass::Bond);
             cds += i.get_asset_value(AssetClass::Cd);
             rle += i.get_asset_value(AssetClass::RealEstate);
@@ -268,16 +266,15 @@ impl fmt::Display for AssetClass {
 
 impl fmt::Display for Asset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &format!("Asset Class: {:<15}{:>9}", self.class, self.value))
+        write!(f, "{}", &format!("Asset Class: {:<15}{:>9.2}", self.class, self.value))
     }
 }
 impl fmt::Display for Allocation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut disp = "Allocation\n".to_string();
         for i in &self.assets {
-            disp.push_str(&format!("{}\n", i));
+            disp.push_str(&format!("{}%\n", i));
         }
-        disp.push_str("\n");
         disp.fmt(f)
     }
 }
@@ -298,19 +295,18 @@ impl fmt::Display for Account {
         let mut disp = "Account Classification: ".to_string();
         disp.push_str(&format!("{}\n", self.classification));
         for i in &self.assets {
-            disp.push_str(&format!("{}\n", i));
+            disp.push_str(&format!("{} $\n", i));
         }
-        disp.push_str("\n");
         disp.fmt(f)
     }
 }
 
 impl fmt::Display for User {
     fn fmt(&self, f:  &mut fmt::Formatter) -> fmt::Result {
-        let mut disp = "Name: ".to_string();
-        disp.push_str(&format!("{} {}", self.fname, self.lname));
+        let mut disp = "\nName: ".to_string();
+        disp.push_str(&format!("{} {}\n", self.fname, self.lname));
         for i in &self.accounts {
-            disp.push_str(&format!("\n{}\n", i));
+            disp.push_str(&format!("{}\n", i));
         }
         disp.push_str(&format!("Target {}\n", self.target));
         disp.push_str(&format!("Current {}\n", self.allocation));
@@ -614,21 +610,4 @@ fn main() {
     
     let diff = user.allocation.diff(&user.target);
     println!("Difference current and target:\n{}", diff);
-
-
-    /*if gtk::init().is_err() {
-        panic!("Failed to initialize GTK");
-    }
-    let glade_src = include_str!("builder_basics.glade");
-    let builder = gtk::Builder::new_from_string(glade_src);
-    let window: gtk::Window = builder.get_object("window1").unwrap();
-    let button: gtk::Button = builder.get_object("button1").unwrap();
-    let dialog: gtk::MessageDialog = builder.get_object("messagedialog1").unwrap();
-    button.connect_clicked(move |_| {
-        dialog.run();
-        dialog.hide();
-    });
-    window.show_all();
-    gtk::main();*/
-
 }
