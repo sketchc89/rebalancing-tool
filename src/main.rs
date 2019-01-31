@@ -3,8 +3,6 @@ use std::io;
 use std::io::Write;
 use std::cmp::Ordering;
 use std::fmt;
-//use gtk::*;
-//use gtk::WidgetExt;
 
 struct User {
     fname: String,
@@ -102,6 +100,30 @@ impl Allocation {
     fn new() -> Allocation {
         Allocation { assets: Vec::new() }
     }
+    fn diff(&self, other: &Allocation) -> Allocation {
+        let mut diff = Allocation::new();
+        for i in &self.assets {
+            for j in &other.assets {
+                match (&i.class, &j.class) {
+                    (AssetClass::Domestic, AssetClass::Domestic) => 
+                        diff.allocate(Asset::new(AssetClass::Domestic, i.value - j.value)),
+                    (AssetClass::International, AssetClass::International) => 
+                        diff.allocate(Asset::new(AssetClass::International, i.value - j.value)),
+                    (AssetClass::Bond, AssetClass::Bond) => 
+                        diff.allocate(Asset::new(AssetClass::Bond, i.value - j.value)),
+                    (AssetClass::Cd, AssetClass::Cd) => 
+                        diff.allocate(Asset::new(AssetClass::Cd, i.value - j.value)),
+                    (AssetClass::RealEstate, AssetClass::RealEstate) => 
+                        diff.allocate(Asset::new(AssetClass::RealEstate, i.value - j.value)),
+                    (AssetClass::Invalid, AssetClass::Invalid) => 
+                        diff.allocate(Asset::new(AssetClass::Invalid, i.value - j.value)),
+                    (_,__) => continue,
+                }
+            }
+        }
+        return diff;
+    }
+
     fn get_allocated_amount(&mut self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
@@ -589,6 +611,11 @@ fn main() {
     user.target_allocation(allocation);
 
     println!("{}", user);
+    
+    let diff = user.allocation.diff(&user.target);
+    println!("Difference current and target:\n{}", diff);
+
+
     /*if gtk::init().is_err() {
         panic!("Failed to initialize GTK");
     }
