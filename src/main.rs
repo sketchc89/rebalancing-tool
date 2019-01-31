@@ -38,7 +38,7 @@ struct Asset {
 
 trait HoldsAssets {
     fn add_asset(&mut self, asset: Asset);
-    fn get_value(&self) -> f64;
+    fn get_total_value(&self) -> f64;
     fn is_empty(&self) -> bool;
     fn get_asset_share(&self, class: AssetClass) -> f64;
 }
@@ -59,6 +59,16 @@ impl Account {
             assets: Vec::new(), 
         }
     }
+    fn get_asset_value(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            println!("Get asset value {}", i.value);
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return x;
+    }
 }
 
 impl HoldsAssets for Account {
@@ -72,7 +82,7 @@ impl HoldsAssets for Account {
         self.assets.push(asset)
     }
 
-    fn get_value(&self) -> f64 {
+    fn get_total_value(&self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
             x = x + i.value;
@@ -83,13 +93,7 @@ impl HoldsAssets for Account {
         return self.assets.is_empty()
     }
     fn get_asset_share(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
-            }
-        }
-        return x / self.get_value();
+        return 100.0*self.get_asset_value(class) / self.get_total_value();
     }
 
 }
@@ -133,7 +137,7 @@ impl User {
     fn target_allocation(&mut self, allocation: Allocation) {
         self.target = allocation;
     }
-    fn current_allocation(&mut self) {
+    fn account_total(&self) -> f64 {
         let mut dom = 0.0;
         let mut int = 0.0;
         let mut bnd = 0.0;
@@ -141,21 +145,48 @@ impl User {
         let mut rle = 0.0;
         let mut inv = 0.0;
         for i in &self.accounts {
-            dom += i.get_asset_share(AssetClass::Domestic);
-            int += i.get_asset_share(AssetClass::International);
-            bnd += i.get_asset_share(AssetClass::Bond);
-            cds += i.get_asset_share(AssetClass::Cd);
-            rle += i.get_asset_share(AssetClass::RealEstate);
-            inv += i.get_asset_share(AssetClass::Invalid);
+            dom += i.get_asset_value(AssetClass::Domestic);
+            int += i.get_asset_value(AssetClass::International);
+            println!("Account {}\nDomestic {}\n International {}\n", i.classification, dom, int);
+            bnd += i.get_asset_value(AssetClass::Bond);
+            cds += i.get_asset_value(AssetClass::Cd);
+            rle += i.get_asset_value(AssetClass::RealEstate);
+            inv += i.get_asset_value(AssetClass::Invalid);
         }
-        let total = dom + int + bnd + cds + rle + inv;
+        return dom + int + bnd + cds + rle + inv;
+    }
+
+    fn account_asset_value(&self, class: AssetClass) -> f64 {
+        let mut tot = 0.0;
+        for i in &self.accounts {
+            for j in &i.assets {
+                if j.class == class {
+                    tot += j.value;
+                }
+            }
+        }
+        return tot;
+    }
+
+    fn account_asset_share(&self, class: AssetClass) -> f64 {
+        return 100.0*self.account_asset_value(class) / self.account_total();
+    }
+
+    fn current_allocation(&mut self) {
+        let dom = Asset::new(AssetClass::Domestic, 
+                             self.account_asset_share(AssetClass::Domestic));
+        let int = Asset::new(AssetClass::International, 
+                             self.account_asset_share(AssetClass::International));
+        let bnd = Asset::new(AssetClass::Bond, 
+                             self.account_asset_share(AssetClass::Bond));
+        let cds = Asset::new(AssetClass::Cd, 
+                             self.account_asset_share(AssetClass::Cd));
+        let rle = Asset::new(AssetClass::RealEstate, 
+                             self.account_asset_share(AssetClass::RealEstate));
+        let inv = Asset::new(AssetClass::Invalid, 
+                             self.account_asset_share(AssetClass::Invalid));
+
         let mut cur = Allocation::new();
-        let dom = Asset::new(AssetClass::Domestic, dom*100.0/total);
-        let int = Asset::new(AssetClass::International, int*100.0/total);
-        let bnd = Asset::new(AssetClass::Bond, bnd*100.0/total);
-        let cds = Asset::new(AssetClass::Cd, cds*100.0/total);
-        let rle = Asset::new(AssetClass::RealEstate, rle*100.0/total);
-        let inv = Asset::new(AssetClass::Invalid, inv*100.0/total);
         cur.allocate(dom);
         cur.allocate(int);
         cur.allocate(bnd);
@@ -177,7 +208,7 @@ impl HoldsAssets for Allocation {
         self.assets.push(asset)
     }
 
-    fn get_value(&self) -> f64 {
+    fn get_total_value(&self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
             x = x + i.value;
@@ -194,7 +225,7 @@ impl HoldsAssets for Allocation {
                 x = x + i.value;
             }
         }
-        return x / self.get_value();
+        return 100.0*x / self.get_total_value();
     }
 
 }
