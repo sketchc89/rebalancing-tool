@@ -12,6 +12,14 @@ struct User {
     target: Allocation,
 }
 
+#[derive(Clone)]
+enum AccountType {
+    Traditional,
+    Taxable,
+    Roth,
+    Educational
+}
+
 struct Account {
     classification: AccountType, 
     assets: Vec<Asset>
@@ -56,6 +64,30 @@ impl Account {
             classification,
             assets: Vec::new(), 
         }
+    }
+    fn diff(&mut self, other: & Account) -> Account{
+        let class = self.classification.clone();
+        let mut diff = Account::new(class);
+        for i in &self.assets {
+            for j in &other.assets {
+                match (&i.class, &j.class) {
+                    (AssetClass::Domestic, AssetClass::Domestic) => 
+                        diff.add_asset(Asset::new(AssetClass::Domestic, i.value - j.value)),
+                    (AssetClass::International, AssetClass::International) => 
+                        diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
+                    (AssetClass::Bond, AssetClass::Bond) => 
+                        diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
+                    (AssetClass::Cd, AssetClass::Cd) => 
+                        diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
+                    (AssetClass::RealEstate, AssetClass::RealEstate) => 
+                        diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
+                    (AssetClass::Invalid, AssetClass::Invalid) => 
+                        diff.add_asset(Asset::new(AssetClass::Invalid, i.value - j.value)),
+                    (_,__) => continue,
+                }
+            }
+        }
+        return diff;
     }
     fn get_asset_value(&self, class: AssetClass) -> f64 {
         let mut x = 0.0;
@@ -121,6 +153,20 @@ impl Allocation {
             }
         }
         return diff;
+    }
+    fn account_from_allocation(&self, total: f64) -> Account {
+        let mut account = Account::new(AccountType::Taxable);
+        for i in &self.assets {
+            match &i.class {
+                AssetClass::Domestic => account.add_asset(Asset::new(AssetClass::Domestic, i.value*total/100.0)),
+                AssetClass::International => account.add_asset(Asset::new(AssetClass::International, i.value*total/100.0)),
+                AssetClass::Bond => account.add_asset(Asset::new(AssetClass::Bond, i.value*total/100.0)),
+                AssetClass::Cd => account.add_asset(Asset::new(AssetClass::Cd, i.value*total/100.0)),
+                AssetClass::RealEstate => account.add_asset(Asset::new(AssetClass::RealEstate, i.value*total/100.0)),
+                AssetClass::Invalid => account.add_asset(Asset::new(AssetClass::Invalid, i.value*total/100.0)),
+            }
+        }
+        return account;
     }
 
     fn get_allocated_amount(&mut self) -> f64 {
@@ -312,13 +358,6 @@ impl fmt::Display for User {
         disp.push_str(&format!("Current {}\n", self.allocation));
         disp.fmt(f)
     }
-}
-
-enum AccountType {
-    Traditional,
-    Taxable,
-    Roth,
-    Educational
 }
 
 #[test]
@@ -609,5 +648,10 @@ fn main() {
     println!("{}", user);
     
     let diff = user.allocation.diff(&user.target);
+    let acc_tot = user.account_total();
+    let diff_acc = diff.account_from_allocation(acc_tot);
     println!("Difference current and target:\n{}", diff);
+    println!("Total assets: ${}\n", acc_tot);
+    println!("Difference current and target in $:\n{}", diff_acc);
+
 }
