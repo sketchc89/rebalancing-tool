@@ -32,7 +32,7 @@ enum AssetClass {
     Domestic,
     International,
     Bond,
-    Cd,
+    //Cd,
     RealEstate,
     Invalid,
 }
@@ -77,8 +77,8 @@ impl Account {
                         diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
                     (AssetClass::Bond, AssetClass::Bond) => 
                         diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
-                    (AssetClass::Cd, AssetClass::Cd) => 
-                        diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
+                    //(AssetClass::Cd, AssetClass::Cd) => 
+                        //diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
                     (AssetClass::RealEstate, AssetClass::RealEstate) => 
                         diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
                     (AssetClass::Invalid, AssetClass::Invalid) => 
@@ -110,7 +110,6 @@ impl HoldsAssets for Account {
         }
         self.assets.push(asset)
     }
-
     fn get_total_value(&self) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
@@ -124,7 +123,6 @@ impl HoldsAssets for Account {
     fn get_asset_share(&self, class: AssetClass) -> f64 {
         return 100.0*self.get_asset_value(class) / self.get_total_value();
     }
-
 }
 
 impl Allocation {
@@ -142,8 +140,8 @@ impl Allocation {
                         diff.allocate(Asset::new(AssetClass::International, i.value - j.value)),
                     (AssetClass::Bond, AssetClass::Bond) => 
                         diff.allocate(Asset::new(AssetClass::Bond, i.value - j.value)),
-                    (AssetClass::Cd, AssetClass::Cd) => 
-                        diff.allocate(Asset::new(AssetClass::Cd, i.value - j.value)),
+                    //(AssetClass::Cd, AssetClass::Cd) => 
+                        //diff.allocate(Asset::new(AssetClass::Cd, i.value - j.value)),
                     (AssetClass::RealEstate, AssetClass::RealEstate) => 
                         diff.allocate(Asset::new(AssetClass::RealEstate, i.value - j.value)),
                     (AssetClass::Invalid, AssetClass::Invalid) => 
@@ -161,7 +159,7 @@ impl Allocation {
                 AssetClass::Domestic => account.add_asset(Asset::new(AssetClass::Domestic, i.value*total/100.0)),
                 AssetClass::International => account.add_asset(Asset::new(AssetClass::International, i.value*total/100.0)),
                 AssetClass::Bond => account.add_asset(Asset::new(AssetClass::Bond, i.value*total/100.0)),
-                AssetClass::Cd => account.add_asset(Asset::new(AssetClass::Cd, i.value*total/100.0)),
+                //AssetClass::Cd => account.add_asset(Asset::new(AssetClass::Cd, i.value*total/100.0)),
                 AssetClass::RealEstate => account.add_asset(Asset::new(AssetClass::RealEstate, i.value*total/100.0)),
                 AssetClass::Invalid => account.add_asset(Asset::new(AssetClass::Invalid, i.value*total/100.0)),
             }
@@ -204,25 +202,25 @@ impl User {
     fn target_allocation(&mut self, allocation: Allocation) {
         self.target = allocation;
     }
-    fn account_total(&self) -> f64 {
+    fn user_total(&self) -> f64 {
         let mut dom = 0.0;
         let mut int = 0.0;
         let mut bnd = 0.0;
-        let mut cds = 0.0;
+        //let mut cds = 0.0;
         let mut rle = 0.0;
         let mut inv = 0.0;
         for i in &self.accounts {
             dom += i.get_asset_value(AssetClass::Domestic);
             int += i.get_asset_value(AssetClass::International);
             bnd += i.get_asset_value(AssetClass::Bond);
-            cds += i.get_asset_value(AssetClass::Cd);
+            //cds += i.get_asset_value(AssetClass::Cd);
             rle += i.get_asset_value(AssetClass::RealEstate);
             inv += i.get_asset_value(AssetClass::Invalid);
         }
-        return dom + int + bnd + cds + rle + inv;
+        return dom + int + bnd + rle + inv; //+ cds 
     }
 
-    fn account_asset_value(&self, class: AssetClass) -> f64 {
+    fn user_asset_value(&self, class: AssetClass) -> f64 {
         let mut tot = 0.0;
         for i in &self.accounts {
             for j in &i.assets {
@@ -234,33 +232,66 @@ impl User {
         return tot;
     }
 
-    fn account_asset_share(&self, class: AssetClass) -> f64 {
-        return 100.0*self.account_asset_value(class) / self.account_total();
+    fn user_asset_share(&self, class: AssetClass) -> f64 {
+        return 100.0*self.user_asset_value(class) / self.user_total();
     }
 
     fn current_allocation(&mut self) {
         let dom = Asset::new(AssetClass::Domestic, 
-                             self.account_asset_share(AssetClass::Domestic));
+                             self.user_asset_share(AssetClass::Domestic));
         let int = Asset::new(AssetClass::International, 
-                             self.account_asset_share(AssetClass::International));
+                             self.user_asset_share(AssetClass::International));
         let bnd = Asset::new(AssetClass::Bond, 
-                             self.account_asset_share(AssetClass::Bond));
-        let cds = Asset::new(AssetClass::Cd, 
-                             self.account_asset_share(AssetClass::Cd));
+                             self.user_asset_share(AssetClass::Bond));
+        //let cds = Asset::new(AssetClass::Cd, 
+                             //self.user_asset_share(AssetClass::Cd));
         let rle = Asset::new(AssetClass::RealEstate, 
-                             self.account_asset_share(AssetClass::RealEstate));
+                             self.user_asset_share(AssetClass::RealEstate));
         let inv = Asset::new(AssetClass::Invalid, 
-                             self.account_asset_share(AssetClass::Invalid));
+                             self.user_asset_share(AssetClass::Invalid));
 
         let mut cur = Allocation::new();
         cur.allocate(dom);
         cur.allocate(int);
         cur.allocate(bnd);
-        cur.allocate(cds);
+        //cur.allocate(cds);
         cur.allocate(rle);
         cur.allocate(inv);
         self.allocation = cur;
     }
+
+    fn allocate_with_priority(&mut self, src_acc: Account, val: f64, priority: Vec<AccountType>) -> Account {
+        println!("non-functional");
+        src_acc
+    }
+    fn reallocate_to_target(&mut self) {
+
+        let target_account = self.target.account_from_allocation(self.user_total());
+        println!("{}", target_account);
+
+        let rel_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Traditional, AccountType::Educational, AccountType::Taxable];
+        let bnd_priority: Vec<AccountType> = vec![AccountType::Educational, AccountType::Traditional, AccountType::Roth, AccountType::Taxable];
+        //let cds_priority: Vec<AccountType> = vec![AccountType::Educational, AccountType::Traditional, AccountType::Roth, AccountType::Taxable];
+        let dom_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Taxable, AccountType::Educational, AccountType::Traditional];
+        let int_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Taxable, AccountType::Educational, AccountType::Traditional];
+        let target_rel = target_account.get_asset_value(AssetClass::RealEstate);
+        let target_bnd = target_account.get_asset_value(AssetClass::Bond);
+        let target_dom = target_account.get_asset_value(AssetClass::Bond);
+        let target_int = target_account.get_asset_value(AssetClass::Bond);
+
+        // first allocate real estate
+        let target_account = self.allocate_with_priority(target_account, target_rel, rel_priority);
+        
+        // next allocate bonds
+        let target_account = self.allocate_with_priority(target_account, target_bnd, bnd_priority); 
+
+        // next allocate domestic
+        let target_account = self.allocate_with_priority(target_account, target_dom, int_priority);
+
+        // next allocate international
+        let target_account = self.allocate_with_priority(target_account, target_int, dom_priority);
+    }
+
 }
 
 impl HoldsAssets for Allocation {
@@ -303,7 +334,7 @@ impl fmt::Display for AssetClass {
             AssetClass::Domestic => "U.S.A.".fmt(f),
             AssetClass::International => "International".fmt(f),
             AssetClass::Bond => "Bonds".fmt(f),
-            AssetClass::Cd => "CDs".fmt(f),
+            //AssetClass::Cd => "CDs".fmt(f),
             AssetClass::RealEstate => "Real Estate".fmt(f),
             _ => "Invalid".fmt(f),
         }
@@ -528,7 +559,7 @@ fn request_allocation()-> Allocation {
     let mut allocation = Allocation::new();
     loop {
         println!("Select the number of the asset class to allocate");
-        println!("1. Domestic\t2. International\t3. Bonds\t4. CDs\t5. Real Estate");
+        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate");
         let mut class = String::new();
         io::stdin().read_line(&mut class)
             .expect("Failed to read line");
@@ -545,8 +576,8 @@ fn request_allocation()-> Allocation {
                 1 => AssetClass::Domestic,
                 2 => AssetClass::International,
                 3 => AssetClass::Bond,
-                4 => AssetClass::Cd,
-                5 => AssetClass::RealEstate,
+                //4 => AssetClass::Cd,
+                4 => AssetClass::RealEstate,
                 _ => AssetClass::Invalid,
             },
             value: value
@@ -648,10 +679,11 @@ fn main() {
     println!("{}", user);
     
     let diff = user.allocation.diff(&user.target);
-    let acc_tot = user.account_total();
+    let acc_tot = user.user_total();
     let diff_acc = diff.account_from_allocation(acc_tot);
     println!("Difference current and target:\n{}", diff);
     println!("Total assets: ${}\n", acc_tot);
     println!("Difference current and target in $:\n{}", diff_acc);
+    user.reallocate_to_target();
 
 }
