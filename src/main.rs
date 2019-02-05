@@ -34,7 +34,6 @@ enum AssetClass {
     Bond,
     //Cd,
     RealEstate,
-    Invalid,
 }
 
 struct Asset {
@@ -81,8 +80,6 @@ impl Account {
                         //diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
                     (AssetClass::RealEstate, AssetClass::RealEstate) => 
                         diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
-                    (AssetClass::Invalid, AssetClass::Invalid) => 
-                        diff.add_asset(Asset::new(AssetClass::Invalid, i.value - j.value)),
                     (_,__) => continue,
                 }
             }
@@ -144,8 +141,6 @@ impl Allocation {
                         //diff.allocate(Asset::new(AssetClass::Cd, i.value - j.value)),
                     (AssetClass::RealEstate, AssetClass::RealEstate) => 
                         diff.allocate(Asset::new(AssetClass::RealEstate, i.value - j.value)),
-                    (AssetClass::Invalid, AssetClass::Invalid) => 
-                        diff.allocate(Asset::new(AssetClass::Invalid, i.value - j.value)),
                     (_,__) => continue,
                 }
             }
@@ -161,7 +156,6 @@ impl Allocation {
                 AssetClass::Bond => account.add_asset(Asset::new(AssetClass::Bond, i.value*total/100.0)),
                 //AssetClass::Cd => account.add_asset(Asset::new(AssetClass::Cd, i.value*total/100.0)),
                 AssetClass::RealEstate => account.add_asset(Asset::new(AssetClass::RealEstate, i.value*total/100.0)),
-                AssetClass::Invalid => account.add_asset(Asset::new(AssetClass::Invalid, i.value*total/100.0)),
             }
         }
         return account;
@@ -228,16 +222,14 @@ impl User {
         let mut bnd = 0.0;
         //let mut cds = 0.0;
         let mut rle = 0.0;
-        let mut inv = 0.0;
         for i in &self.accounts {
             dom += i.get_asset_value(AssetClass::Domestic);
             int += i.get_asset_value(AssetClass::International);
             bnd += i.get_asset_value(AssetClass::Bond);
             //cds += i.get_asset_value(AssetClass::Cd);
             rle += i.get_asset_value(AssetClass::RealEstate);
-            inv += i.get_asset_value(AssetClass::Invalid);
         }
-        return dom + int + bnd + rle + inv; //+ cds 
+        return dom + int + bnd + rle; //+ cds 
     }
 
     fn user_asset_value(&self, class: AssetClass) -> f64 {
@@ -267,8 +259,6 @@ impl User {
                              //self.user_asset_share(AssetClass::Cd));
         let rle = Asset::new(AssetClass::RealEstate, 
                              self.user_asset_share(AssetClass::RealEstate));
-        let inv = Asset::new(AssetClass::Invalid, 
-                             self.user_asset_share(AssetClass::Invalid));
 
         let mut cur = Allocation::new();
         cur.allocate(dom);
@@ -276,7 +266,6 @@ impl User {
         cur.allocate(bnd);
         //cur.allocate(cds);
         cur.allocate(rle);
-        cur.allocate(inv);
         self.allocation = cur;
     }
 
@@ -356,7 +345,6 @@ impl fmt::Display for AssetClass {
             AssetClass::Bond => "Bonds".fmt(f),
             //AssetClass::Cd => "CDs".fmt(f),
             AssetClass::RealEstate => "Real Estate".fmt(f),
-            _ => "Invalid".fmt(f),
         }
     }
 }
@@ -590,19 +578,13 @@ fn request_allocation()-> Allocation {
             .expect("Failed to read line");
         let class: u8 = class.trim().parse().unwrap_or(0);
         let value: f64 = value.trim().parse().unwrap_or(0.0);
-        let asset = Asset { 
-            class: match class {
-                0 => AssetClass::Invalid,
-                1 => AssetClass::Domestic,
-                2 => AssetClass::International,
-                3 => AssetClass::Bond,
-                //4 => AssetClass::Cd,
-                4 => AssetClass::RealEstate,
-                _ => AssetClass::Invalid,
-            },
-            value: value
-        };
-        allocation.allocate(asset);
+        match class {
+                1 => allocation.allocate(Asset::new(AssetClass::Domestic, value)),
+                2 => allocation.allocate(Asset::new(AssetClass::International, value)),
+                3 => allocation.allocate(Asset::new(AssetClass::Bond, value)),
+                4 => allocation.allocate(Asset::new(AssetClass::RealEstate, value)),
+                _ => continue,
+        }
         match allocation.is_valid_allocation() {
             Ordering::Equal => break,
             Ordering::Less => continue,
