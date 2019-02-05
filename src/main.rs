@@ -200,16 +200,17 @@ impl User {
     fn request_action(&mut self) {
         loop {
             println!("What would you like to do?");
-            println!("1. Change target allocation\t2. Add account\t3. Quit");
+            println!("1. Change target allocation\t2. Add account\t3. Display user info\t4. Quit");
             let mut action = String::new();
             io::stdin().read_line(&mut action)
                 .expect("Failed to read line");
             let choice: u8 = action.trim().parse().unwrap_or(0);
-            if choice == 3 { break; }
+            if choice == 4 { break; }
             match choice {
                 1 => self.target_allocation(request_allocation()),
                 2 => self.add_account(setup_new_account()),
-                3 => break,
+                3 => println!("{}", self),
+                4 => break,
                 _ => continue,
             }
 
@@ -631,7 +632,10 @@ fn setup_account(account_type: AccountType) -> Account {
         println!("How much money would you like to put towards this asset class?");
         io::stdin().read_line(&mut value)
             .expect("Failed to read line");
-        let value: f64 = value.trim().parse().unwrap_or(0.0);
+        let value: f64 = match parse_portfolio_value(&value) {
+            Ok(val) => val,
+            Err(_) => 0.0 
+        };
         match choice {
             1 => account.add_asset(Asset::new(AssetClass::Domestic, value)),
             2 => account.add_asset(Asset::new(AssetClass::International, value)),
@@ -690,44 +694,8 @@ fn main() {
     let last = get_string("first name");
     let mut user = User::new(&first, &last);
     user.request_action();
-    let allocation = request_allocation();
-    println!("{}", allocation);
-    user.add_account(setup_new_account());
-    let taxable_dom = get_portfolio_value("taxable domestic");
-    let taxable_intl = get_portfolio_value("taxable international");
-    let traditional_dom = get_portfolio_value("401k domestic");
-    let traditional_intl = get_portfolio_value("401k international");
-    let roth_dom = get_portfolio_value("Roth domestic");
-    let roth_intl = get_portfolio_value("Roth international");
-    let edu_dom = get_portfolio_value("529 domestic");
-    let edu_intl = get_portfolio_value("529 international");
-    let taxable_domestic = Asset::new(AssetClass::Domestic, taxable_dom);
-    let taxable_international = Asset::new(AssetClass::International, taxable_intl);
-    let traditional_domestic = Asset::new(AssetClass::Domestic, traditional_dom);
-    let traditional_international = Asset::new(AssetClass::International, traditional_intl);
-    let roth_domestic = Asset::new(AssetClass::Domestic, roth_dom);
-    let roth_international = Asset::new(AssetClass::International, roth_intl);
-    let edu_domestic = Asset::new(AssetClass::Domestic, edu_dom);
-    let edu_international = Asset::new(AssetClass::International, edu_intl);
-    let mut taxable_account = Account::new(AccountType::Taxable);
-    taxable_account.add_asset(taxable_domestic);
-    taxable_account.add_asset(taxable_international);
-    let mut traditional_account = Account::new(AccountType::Traditional);
-    traditional_account.add_asset(traditional_domestic);
-    traditional_account.add_asset(traditional_international);
-    let mut roth_account = Account::new(AccountType::Roth);
-    roth_account.add_asset(roth_domestic);
-    roth_account.add_asset(roth_international);
-    let mut edu_account = Account::new(AccountType::Educational);
-    edu_account.add_asset(edu_domestic);
-    edu_account.add_asset(edu_international);
-    user.add_account(taxable_account);
-    user.add_account(traditional_account);
-    user.add_account(roth_account);
-    user.target_allocation(allocation);
 
-    println!("{}", user);
-    
+    // TODO move calculating difference to own function
     let diff = user.allocation.diff(&user.target);
     let acc_tot = user.user_total();
     let diff_acc = diff.account_from_allocation(acc_tot);
