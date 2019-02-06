@@ -64,7 +64,7 @@ impl Account {
             assets: Vec::new(), 
         }
     }
-    fn diff(&mut self, other: & Account) -> Account{
+    fn diff(&mut self, other: & Account) -> Account {
         let class = self.classification.clone();
         let mut diff = Account::new(class);
         for i in &self.assets {
@@ -200,20 +200,38 @@ impl User {
     fn request_action(&mut self) {
         loop {
             println!("What would you like to do?");
-            println!("1. Change target allocation\t2. Add account\t3. Display user info\t4. Quit");
+            println!("1. Change target allocation\t2. Add account\t3. Display user info\t4. Display difference between current allocation and target\t5. Quit");
             let mut action = String::new();
             io::stdin().read_line(&mut action)
                 .expect("Failed to read line");
             let choice: u8 = action.trim().parse().unwrap_or(0);
-            if choice == 4 { break; }
             match choice {
                 1 => self.target_allocation(request_allocation()),
                 2 => self.add_account(setup_new_account()),
                 3 => println!("{}", self),
-                4 => break,
+                4 => self.display_allocation_diff(),
+                5 => break,
                 _ => continue,
             }
 
+        }
+    }
+
+    fn display_allocation_diff(&self) {
+        loop {
+            println!("In (1) $ or (2) % ?");
+            let mut choice = String::new();
+            io::stdin().read_line(&mut choice)
+                .expect("Failed to read line");
+            let choice: u8 = choice.trim().parse().unwrap_or(0);
+            let diff = self.allocation.diff(&self.target); 
+            match choice {
+                1 => { println!("{}", diff); 
+                    break; },
+                2 => { println!("{}", diff.account_from_allocation(self.user_total()));
+                    break; },
+                _ => continue,
+            }
         }
     }
 
@@ -274,6 +292,7 @@ impl User {
         println!("non-functional");
         src_acc
     }
+
     fn reallocate_to_target(&mut self) {
 
         let target_account = self.target.account_from_allocation(self.user_total());
@@ -622,7 +641,7 @@ fn setup_account(account_type: AccountType) -> Account {
     let mut account = Account::new(account_type);
     loop {
         println!("What type of asset to account?");
-        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate\t5. Quit");
+        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate\t5. Finish");
         let mut asset_class = String::new();
         io::stdin().read_line(&mut asset_class)
             .expect("Failed to read line");
@@ -696,12 +715,5 @@ fn main() {
     user.request_action();
 
     // TODO move calculating difference to own function
-    let diff = user.allocation.diff(&user.target);
-    let acc_tot = user.user_total();
-    let diff_acc = diff.account_from_allocation(acc_tot);
-    println!("Difference current and target:\n{}", diff);
-    println!("Total assets: ${}\n", acc_tot);
-    println!("Difference current and target in $:\n{}", diff_acc);
-    user.reallocate_to_target();
 
 }
