@@ -39,6 +39,13 @@ struct Asset {
     value: f64
 }
 
+trait HoldsAssets {
+    fn add_asset(&mut self, asset: Asset);
+    fn get_total_value(&self) -> f64;
+    fn is_empty(&self) -> bool;
+    fn get_asset_share(&self, class: AssetClass) -> f64;
+}
+
 impl Asset {
     fn new(class: AssetClass, value: f64) -> Asset {
         Asset {
@@ -46,6 +53,76 @@ impl Asset {
             value,
         }
     }
+}
+
+impl Account {
+    fn new(classification: AccountType) -> Account {
+        Account { 
+            classification,
+            assets: Vec::new(), 
+        }
+    }
+    fn diff(&mut self, other: & Account) -> Account {
+        let class = self.classification.clone();
+        let mut diff = Account::new(class);
+        for i in &self.assets {
+            for j in &other.assets {
+                match (&i.class, &j.class) {
+                    (AssetClass::Domestic, AssetClass::Domestic) => 
+                        diff.add_asset(Asset::new(AssetClass::Domestic, i.value - j.value)),
+                    (AssetClass::International, AssetClass::International) => 
+                        diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
+                    (AssetClass::Bond, AssetClass::Bond) => 
+                        diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
+                    //(AssetClass::Cd, AssetClass::Cd) => 
+                        //diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
+                    (AssetClass::RealEstate, AssetClass::RealEstate) => 
+                        diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
+                    (_,__) => continue,
+                }
+            }
+        }
+        return diff;
+    }
+    fn get_asset_value(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return x;
+    }
+    fn add_asset(&mut self, asset: Asset) {
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                i.value = i.value + asset.value;
+                return;
+            }
+        }
+        self.assets.push(asset)
+    }
+
+    fn get_total_value(&self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            x = x + i.value;
+        }
+        return x;
+    }
+    fn is_empty(&self) -> bool {
+        return self.assets.is_empty()
+    }
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return 100.0*x / self.get_total_value();
+    }
+
 }
 
 impl User {
@@ -157,10 +234,10 @@ impl User {
         self.allocation = cur;
     }
 
-    /*fn add_asset_with_priority(&mut self, src_acc: Account, val: f64, priority: Vec<AccountType>) -> Account {
+    fn add_asset_with_priority(&mut self, src_acc: Account, val: f64, priority: Vec<AccountType>) -> Account {
         println!("non-functional");
         src_acc
-    }*/
+    }
 
     /*fn readd_asset_to_target(&mut self) {
 
@@ -192,55 +269,7 @@ impl User {
 
 }
 
-impl Account {
-    fn new(classification: AccountType) -> Account {
-        Account { 
-            classification,
-            assets: Vec::new(), 
-        }
-    }
-    fn diff(&mut self, other: & Account) -> Account {
-        let class = self.classification.clone();
-        let mut diff = Account::new(class);
-        for i in &self.assets {
-            for j in &other.assets {
-                match (&i.class, &j.class) {
-                    (AssetClass::Domestic, AssetClass::Domestic) => 
-                        diff.add_asset(Asset::new(AssetClass::Domestic, i.value - j.value)),
-                    (AssetClass::International, AssetClass::International) => 
-                        diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
-                    (AssetClass::Bond, AssetClass::Bond) => 
-                        diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
-                    //(AssetClass::Cd, AssetClass::Cd) => 
-                        //diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
-                    (AssetClass::RealEstate, AssetClass::RealEstate) => 
-                        diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
-                    (_,__) => continue,
-                }
-            }
-        }
-        return diff;
-    }
-    fn get_asset_value(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
-            }
-        }
-        return x;
-    }
-
-    /*fn get_asset_share(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
-            }
-        }
-        return 100.0*x / self.get_total_value();
-    }*/
-
+impl HoldsAssets for Account {
     fn add_asset(&mut self, asset: Asset) {
         for i in &mut self.assets {
             if i.class == asset.class {
@@ -258,10 +287,10 @@ impl Account {
         }
         return x;
     }
-    /*fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         return self.assets.is_empty()
-    }*/
-    /*fn get_asset_share(&self, class: AssetClass) -> f64 {
+    }
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
             if i.class == class {
@@ -269,7 +298,7 @@ impl Account {
             }
         }
         return 100.0*x / self.get_total_value();
-    }*/
+    }
 
 }
 
@@ -509,13 +538,19 @@ fn request_allocation()-> Account {
             .expect("Failed to read line");
         println!("Percent (0-100) to add_asset to this asset");
         let class: u8 = class.trim().parse().unwrap_or(0);
-        if class > 4 || class < 1 { continue; }
+        if class > 4 || class < 1 { 
+            continue; 
+        }
 
         println!("Already added assets {}%", allocation.get_total_value());
         let mut value = String::new();
         io::stdin().read_line(&mut value)
             .expect("Failed to read line");
-        let value: f64 = value.trim().parse().unwrap_or(0.0);
+        let value: f64 = match parse_portfolio_value(&value) {
+            Ok(val) => val,
+            Err(why) => {println!("{:?}", why); 
+                0.0},
+        };
         println!("\n");
         match class {
                 1 => allocation.add_asset(Asset::new(AssetClass::Domestic, value)),
@@ -567,7 +602,9 @@ fn setup_account(account_type: AccountType) -> Account {
         io::stdin().read_line(&mut asset_class)
             .expect("Failed to read line");
         let choice: u8 = asset_class.trim().parse().unwrap_or(0);
-        if choice > 4 || choice < 1 { break; }
+        if choice > 4 || choice < 1 { 
+            break; 
+        }
         let mut value = String::new();
         println!("How much money would you like to put towards this asset class?");
         io::stdin().read_line(&mut value)
@@ -601,7 +638,7 @@ fn parse_portfolio_value
     }
 }
 
-/*fn get_portfolio_value (name: &str) -> f64 {
+fn get_portfolio_value (name: &str) -> f64 {
     let value:f64 = loop {
         print!("Input the value of your {} investment account: ", name);
         io::stdout().flush().unwrap();
@@ -617,7 +654,7 @@ fn parse_portfolio_value
         };
     };
     return value;
-}*/
+}
 
 fn get_string (descriptor: &str) -> String {
     print!("Input the value of your {}: ", descriptor);
