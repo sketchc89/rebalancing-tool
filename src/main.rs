@@ -304,10 +304,15 @@ impl fmt::Display for AccountType {
 
 impl fmt::Display for Account {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut units = '$';
+        if let AccountType::Allocation = self.classification {
+            units = '%';
+        }
+
         let mut disp = "Account Classification: ".to_string();
         disp.push_str(&format!("{}\n", self.classification));
         for i in &self.assets {
-            disp.push_str(&format!("{} $\n", i));
+            disp.push_str(&format!("{} {}\n", i, units));
         }
         disp.fmt(f)
     }
