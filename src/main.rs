@@ -93,6 +93,36 @@ impl Account {
         }
         return x;
     }
+    fn add_asset(&mut self, asset: Asset) {
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                i.value = i.value + asset.value;
+                return;
+            }
+        }
+        self.assets.push(asset)
+    }
+
+    fn get_total_value(&self) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            x = x + i.value;
+        }
+        return x;
+    }
+    fn is_empty(&self) -> bool {
+        return self.assets.is_empty()
+    }
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
+        let mut x = 0.0;
+        for i in &self.assets {
+            if i.class == class {
+                x = x + i.value;
+            }
+        }
+        return 100.0*x / self.get_total_value();
+    }
+
 }
 
 impl User {
@@ -500,16 +530,22 @@ fn request_allocation()-> Account {
     loop {
         println!("Select the number of the asset class to add_asset");
         println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate");
+        //
+        // TODO add abort
+
         let mut class = String::new();
         io::stdin().read_line(&mut class)
             .expect("Failed to read line");
         println!("Percent (0-100) to add_asset to this asset");
-        println!("Already add_assetd {}%", allocation.get_total_value());
+        let class: u8 = class.trim().parse().unwrap_or(0);
+        if class > 4 || class < 1 { continue; }
+
+        println!("Already added assets {}%", allocation.get_total_value());
         let mut value = String::new();
         io::stdin().read_line(&mut value)
             .expect("Failed to read line");
-        let class: u8 = class.trim().parse().unwrap_or(0);
         let value: f64 = value.trim().parse().unwrap_or(0.0);
+        println!("\n");
         match class {
                 1 => allocation.add_asset(Asset::new(AssetClass::Domestic, value)),
                 2 => allocation.add_asset(Asset::new(AssetClass::International, value)),
@@ -539,6 +575,7 @@ fn setup_new_account() -> Account {
         io::stdin().read_line(&mut account_type)
             .expect("Failed to read line");
         let choice: u8 = account_type.trim().parse().unwrap_or(0);
+        println!("\n");
         match choice {
             1 => break AccountType::Taxable,
             2 => break AccountType::Traditional,
@@ -559,15 +596,13 @@ fn setup_account(account_type: AccountType) -> Account {
         io::stdin().read_line(&mut asset_class)
             .expect("Failed to read line");
         let choice: u8 = asset_class.trim().parse().unwrap_or(0);
-        if choice == 5 { break; }
+        if choice > 4 || choice < 1 { break; }
         let mut value = String::new();
         println!("How much money would you like to put towards this asset class?");
         io::stdin().read_line(&mut value)
             .expect("Failed to read line");
-        let value: f64 = match parse_portfolio_value(&value) {
-            Ok(val) => val,
-            Err(_) => 0.0 
-        };
+        let value: f64 = value.trim().parse().unwrap_or(0.0);
+        println!("\n");
         match choice {
             1 => account.add_asset(Asset::new(AssetClass::Domestic, value)),
             2 => account.add_asset(Asset::new(AssetClass::International, value)),
