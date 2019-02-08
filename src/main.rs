@@ -101,16 +101,16 @@ impl User {
             let choice: u8 = choice.trim().parse().unwrap_or(0);
             let diff = self.allocation.diff(&self.target); 
             match choice {
-                1 => { println!("{}", diff); 
+                1 => { println!("{}", diff.multiply(self.get_total_value()/100.0)); // TODO implement multiply account by value
                     break; },
-                2 => { println!("{}", diff); // TODO implement multiply account by value
+                2 => { println!("{}", diff); 
                     break; },
                 _ => continue,
             }
         }
     }
 
-    fn user_total(&self) -> f64 {
+    fn get_total_value(&self) -> f64 {
         let mut dom = 0.0;
         let mut int = 0.0;
         let mut bnd = 0.0;
@@ -139,7 +139,7 @@ impl User {
     }
 
     fn user_asset_share(&self, class: AssetClass) -> f64 {
-        return 100.0*self.user_asset_value(class) / self.user_total();
+        return 100.0*self.user_asset_value(class) / self.get_total_value();
     }
 
     fn current_allocation(&mut self) {
@@ -205,9 +205,10 @@ impl Account {
             assets: Vec::new(), 
         }
     }
+    // TODO fix diff function so that funds in one account and not another are displayed
     fn diff(&mut self, other: & Account) -> Account {
-        let class = self.classification.clone();
-        let mut diff = Account::new(class);
+        let classification = self.classification.clone();
+        let mut diff = Account::new(classification);
         for i in &self.assets {
             for j in &other.assets {
                 match (&i.class, &j.class) {
@@ -217,8 +218,6 @@ impl Account {
                         diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
                     (AssetClass::Bond, AssetClass::Bond) => 
                         diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
-                    //(AssetClass::Cd, AssetClass::Cd) => 
-                        //diff.add_asset(Asset::new(AssetClass::Cd, i.value - j.value)),
                     (AssetClass::RealEstate, AssetClass::RealEstate) => 
                         diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
                     (_,__) => continue,
@@ -226,6 +225,20 @@ impl Account {
             }
         }
         return diff;
+    }
+
+    fn multiply(&self, scalar: f64) -> Account {
+        let classification = self.classification.clone();
+        let mut mult = Account::new(classification);
+        for i in &self.assets {
+            match &i.class {
+                AssetClass::Domestic => mult.add_asset(Asset::new(AssetClass::Domestic, i.value * scalar)),
+                AssetClass::International => mult.add_asset(Asset::new(AssetClass::International, i.value * scalar)),
+                AssetClass::Bond => mult.add_asset(Asset::new(AssetClass::Bond, i.value * scalar)),
+                AssetClass::RealEstate => mult.add_asset(Asset::new(AssetClass::RealEstate, i.value * scalar)),
+            }
+        }
+        return mult;
     }
     fn get_asset_value(&self, class: AssetClass) -> f64 {
         let mut x = 0.0;
