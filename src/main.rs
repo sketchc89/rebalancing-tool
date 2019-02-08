@@ -647,7 +647,7 @@ fn main() {
     //println!("{}", &format!("{:a^20}", AssetClass::Domestic));
     
     let first = get_string("first name");
-    let last = get_string("first name");
+    let last = get_string("last name");
     let mut user = User::new(&first, &last);
     user.request_action();
 
