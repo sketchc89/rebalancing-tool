@@ -69,14 +69,20 @@ impl User {
     fn request_action(&mut self) {
         loop {
             println!("What would you like to do?");
-            println!("1. Change target allocation\t2. Add account\t3. Display user info\t4. Display difference between current allocation and target\t5. Quit");
+            println!("1. Change target allocation\t2. Add account\t3. Display user info\t4. Display off target summary\t5. Quit");
             let mut action = String::new();
             io::stdin().read_line(&mut action)
                 .expect("Failed to read line");
             let choice: u8 = action.trim().parse().unwrap_or(0);
             match choice {
-                1 => self.target_allocation(request_allocation()),
-                2 => self.add_account(setup_new_account()),
+                1 => match request_allocation() {
+                    Ok(allocation) => self.target_allocation(allocation),
+                    Err(why) => println!("{}", why)
+                }
+                2 => match setup_new_account() {
+                    Ok(account) => self.add_account(account),
+                    Err(why) => println!("{}", why),
+                }
                 3 => println!("{}", self),
                 4 => self.display_allocation_diff(),
                 5 => break,
@@ -496,20 +502,22 @@ fn allocation_says_whether_over_100() {
     }
 }*/
 
-fn request_allocation()-> Account {
+fn request_allocation()-> Result<Account, String> {
     let mut allocation = Account::new(AccountType::Allocation);
     loop {
         println!("Select the number of the asset class to add_asset");
-        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate");
-        //
-        // TODO add abort
+        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate\t5. Cancel");
 
         let mut class = String::new();
         io::stdin().read_line(&mut class)
             .expect("Failed to read line");
         println!("Percent (0-100) to add_asset to this asset");
         let class: u8 = class.trim().parse().unwrap_or(0);
-        if class > 4 || class < 1 { continue; }
+        if class > 5 || class < 1 { 
+            continue; 
+        } else if class == 5 {
+            return Err("Cancelled target allocation".to_string());
+        }
 
         println!("Already added assets {}%", allocation.get_total_value());
         let mut value = String::new();
@@ -535,13 +543,13 @@ fn request_allocation()-> Account {
         }
 
     }
-    return allocation;
+    return Ok(allocation);
 }
 
-fn setup_new_account() -> Account {
+fn setup_new_account() -> Result<Account, String> {
     let account_type = loop {
         println!("What type of account would you like to setup?");
-        println!("1. Taxable\t2. Traditional/401(k)\t3. Roth/Roth 401(k)\t4. Educational");
+        println!("1. Taxable\t2. Traditional/401(k)\t3. Roth/Roth 401(k)\t4. Educational\t5. Cancel");
         let mut account_type = String::new();
         io::stdin().read_line(&mut account_type)
             .expect("Failed to read line");
@@ -552,22 +560,29 @@ fn setup_new_account() -> Account {
             2 => break AccountType::Traditional,
             3 => break AccountType::Roth,
             4 => break AccountType::Educational,
+            5 => return Err("Cancelled account creation".to_string()),
             _ => continue,
         }
     };
-    return setup_account(account_type);
+    setup_account(account_type)
 }
 
-fn setup_account(account_type: AccountType) -> Account {
+fn setup_account(account_type: AccountType) -> Result<Account, String> {
     let mut account = Account::new(account_type);
     loop {
         println!("What type of asset to account?");
-        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate\t5. Finish");
+        println!("1. Domestic\t2. International\t3. Bonds\t4. Real Estate\t5. Finish\t6. Cancel");
         let mut asset_class = String::new();
         io::stdin().read_line(&mut asset_class)
             .expect("Failed to read line");
         let choice: u8 = asset_class.trim().parse().unwrap_or(0);
-        if choice > 4 || choice < 1 { break; }
+
+        if choice == 5 { 
+            break; 
+        } else if choice == 6 {
+            return Err("Cancelled account creation".to_string());
+        }
+
         let mut value = String::new();
         println!("How much money would you like to put towards this asset class?");
         io::stdin().read_line(&mut value)
@@ -583,11 +598,10 @@ fn setup_account(account_type: AccountType) -> Account {
             2 => account.add_asset(Asset::new(AssetClass::International, value)),
             3 => account.add_asset(Asset::new(AssetClass::Bond, value)),
             4 => account.add_asset(Asset::new(AssetClass::RealEstate, value)),
-            5 => break,
             _ => continue,
         }
     }
-    return account;
+    return Ok(account);
 }
 
 fn parse_portfolio_value
