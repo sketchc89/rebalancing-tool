@@ -100,8 +100,9 @@ impl User {
                 .expect("Failed to read line");
             let choice: u8 = choice.trim().parse().unwrap_or(0);
             let diff = self.allocation.diff(&self.target); 
+            println!("The user's accounts differ from the target allocation by: ");
             match choice {
-                1 => { println!("{}", diff.multiply(self.get_total_value()/100.0)); // TODO implement multiply account by value
+                1 => { println!("{}", diff.multiply(self.get_total_value()/100.0)); 
                     break; },
                 2 => { println!("{}", diff); 
                     break; },
@@ -202,10 +203,12 @@ impl Account {
     fn new(classification: AccountType) -> Account {
         Account { 
             classification,
-            assets: Vec::new(), 
+            assets: vec![Asset::new(AssetClass::Domestic, 0.0),
+                         Asset::new(AssetClass::International, 0.0),
+                         Asset::new(AssetClass::Bond, 0.0),
+                         Asset::new(AssetClass::RealEstate, 0.0)]
         }
     }
-    // TODO fix diff function so that funds in one account and not another are displayed
     fn diff(&mut self, other: & Account) -> Account {
         let classification = self.classification.clone();
         let mut diff = Account::new(classification);
