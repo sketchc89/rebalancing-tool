@@ -99,12 +99,14 @@ impl User {
             io::stdin().read_line(&mut choice)
                 .expect("Failed to read line");
             let choice: u8 = choice.trim().parse().unwrap_or(0);
-            let diff = self.allocation.diff(&self.target); 
-            println!("The user's accounts differ from the target allocation by: ");
+            let mut diff = self.allocation.diff(&self.target); 
+            println!("The user's accounts differ from the target allocation by: (+) too high, (-) too low");
             match choice {
-                1 => { println!("{}", diff.multiply(self.get_total_value()/100.0)); 
+                1 => { diff.change_account_classification(AccountType::Taxable);
+                    println!("{}", diff.multiply(0.01*self.get_total_value())); 
                     break; },
-                2 => { println!("{}", diff); 
+                2 => { 
+                    println!("{}", diff); 
                     break; },
                 _ => continue,
             }
@@ -209,6 +211,12 @@ impl Account {
                          Asset::new(AssetClass::RealEstate, 0.0)]
         }
     }
+
+    fn change_account_classification(&mut self, classification: AccountType) {
+        self.classification = classification;
+    }
+
+
     fn diff(&mut self, other: & Account) -> Account {
         let classification = self.classification.clone();
         let mut diff = Account::new(classification);
@@ -281,18 +289,8 @@ impl Account {
         return x;
     }
     /*fn is_empty(&self) -> bool {
-        return self.assets.is_empty()
+        return self.get_total_value == 0;
     }*/
-    /*fn get_asset_share(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
-            }
-        }
-        return 100.0*x / self.get_total_value();
-    }*/
-
 }
 
 
@@ -666,7 +664,4 @@ fn main() {
     let last = get_string("last name");
     let mut user = User::new(&first, &last);
     user.request_action();
-
-    // TODO move calculating difference to own function
-
 }
