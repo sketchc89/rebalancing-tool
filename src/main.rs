@@ -129,7 +129,29 @@ impl User {
         return dom + int + bnd + rle; //+ cds 
     }
 
-    fn user_asset_value(&self, class: AssetClass) -> f64 {
+    fn account_breakdown_display(&self) -> String {
+        let mut tax = 0.0;
+        let mut trad = 0.0;
+        let mut roth = 0.0;
+        let mut edu = 0.0;
+        for i in &self.accounts {
+            match i.classification {
+                AccountType::Taxable => tax = tax + i.get_total_value(),
+                AccountType::Traditional => trad = trad + i.get_total_value(),
+                AccountType::Roth => roth += i.get_total_value(),
+                AccountType::Educational => edu += i.get_total_value(),
+                _ => continue,
+            }
+        }
+        let mut disp = String::new();
+        disp.push_str(&format!("Taxable:        ${:>9.2}\t{:>6.2}%\n", tax,  100.0*tax/self.get_total_value()));
+        disp.push_str(&format!("Traditional:    ${:>9.2}\t{:>6.2}%\n", trad, 100.0*trad/self.get_total_value()));
+        disp.push_str(&format!("Roth:           ${:>9.2}\t{:>6.2}%\n", roth, 100.0*roth/self.get_total_value()));
+        disp.push_str(&format!("Educational:    ${:>9.2}\t{:>6.2}%\n", edu,  100.0*edu/self.get_total_value()));
+                               disp
+    }
+
+    fn get_asset_value(&self, class: AssetClass) -> f64 {
         let mut tot = 0.0;
         for i in &self.accounts {
             for j in &i.assets {
@@ -141,21 +163,21 @@ impl User {
         return tot;
     }
 
-    fn user_asset_share(&self, class: AssetClass) -> f64 {
-        return 100.0*self.user_asset_value(class) / self.get_total_value();
+    fn get_asset_share(&self, class: AssetClass) -> f64 {
+        return 100.0*self.get_asset_value(class) / self.get_total_value();
     }
 
     fn current_allocation(&mut self) {
         let dom = Asset::new(AssetClass::Domestic, 
-                             self.user_asset_share(AssetClass::Domestic));
+                             self.get_asset_share(AssetClass::Domestic));
         let int = Asset::new(AssetClass::International, 
-                             self.user_asset_share(AssetClass::International));
+                             self.get_asset_share(AssetClass::International));
         let bnd = Asset::new(AssetClass::Bond, 
-                             self.user_asset_share(AssetClass::Bond));
+                             self.get_asset_share(AssetClass::Bond));
         //let cds = Asset::new(AssetClass::Cd, 
-                             //self.user_asset_share(AssetClass::Cd));
+                             //self.get_asset_share(AssetClass::Cd));
         let rle = Asset::new(AssetClass::RealEstate, 
-                             self.user_asset_share(AssetClass::RealEstate));
+                             self.get_asset_share(AssetClass::RealEstate));
 
         let mut cur = Account::new(AccountType::Allocation);
         cur.add_asset(dom);
@@ -348,6 +370,7 @@ impl fmt::Display for User {
         }
         disp.push_str(&format!("Target {}\n", self.target));
         disp.push_str(&format!("Current {}\n", self.allocation));
+        disp.push_str(&format!("{}", self.account_breakdown_display()));
         disp.fmt(f)
     }
 }
@@ -595,6 +618,8 @@ fn setup_account(account_type: AccountType) -> Result<Account, String> {
             break; 
         } else if choice == 6 {
             return Err("Cancelled account creation".to_string());
+        } else if choice > 6 || choice < 1 {
+            continue;
         }
 
         let mut value = String::new();
