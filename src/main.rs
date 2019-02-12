@@ -1,3 +1,5 @@
+extern crate separator;
+use separator::FixedPlaceSeparatable;
 use std::f64;
 use std::io;
 use std::io::Write;
@@ -144,11 +146,11 @@ impl User {
             }
         }
         let mut disp = String::new();
-        disp.push_str(&format!("Taxable:        ${:>9.2}\t{:>6.2}%\n", tax,  100.0*tax/self.get_total_value()));
-        disp.push_str(&format!("Traditional:    ${:>9.2}\t{:>6.2}%\n", trad, 100.0*trad/self.get_total_value()));
-        disp.push_str(&format!("Roth:           ${:>9.2}\t{:>6.2}%\n", roth, 100.0*roth/self.get_total_value()));
-        disp.push_str(&format!("Educational:    ${:>9.2}\t{:>6.2}%\n", edu,  100.0*edu/self.get_total_value()));
-                               disp
+        disp.push_str(&format!("Taxable:        ${:>15}{:>8.2} %\n", tax.separated_string_with_fixed_place(2),  100.0*tax/self.get_total_value()));
+        disp.push_str(&format!("Traditional:    ${:>15}{:>8.2} %\n", trad.separated_string_with_fixed_place(2), 100.0*trad/self.get_total_value()));
+        disp.push_str(&format!("Roth:           ${:>15}{:>8.2} %\n", roth.separated_string_with_fixed_place(2), 100.0*roth/self.get_total_value()));
+        disp.push_str(&format!("Educational:    ${:>15}{:>8.2} %\n", edu.separated_string_with_fixed_place(2),  100.0*edu/self.get_total_value()));
+        disp
     }
 
     fn get_asset_value(&self, class: AssetClass) -> f64 {
@@ -330,7 +332,7 @@ impl fmt::Display for AssetClass {
 
 impl fmt::Display for Asset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &format!("Asset Class: {:<15}{:>9.2}", self.class, self.value))
+        write!(f, "{}", &format!("Asset Class: {:<15}{:>12}", self.class, self.value.separated_string_with_fixed_place(2)))
     }
 }
 impl fmt::Display for AccountType {
