@@ -27,7 +27,7 @@ struct Account {
     assets: Vec<Asset>
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 enum AssetClass {
     Domestic,
     International,
@@ -153,11 +153,11 @@ impl User {
         disp
     }
 
-    fn get_asset_value(&self, class: AssetClass) -> f64 {
+    fn get_asset_value(&self, class: &AssetClass) -> f64 {
         let mut tot = 0.0;
         for i in &self.accounts {
             for j in &i.assets {
-                if j.class == class {
+                if j.class == *class {
                     tot += j.value;
                 }
             }
@@ -165,21 +165,21 @@ impl User {
         return tot;
     }
 
-    fn get_asset_share(&self, class: AssetClass) -> f64 {
+    fn get_asset_share(&self, class: &AssetClass) -> f64 {
         return 100.0*self.get_asset_value(class) / self.get_total_value();
     }
 
     fn current_allocation(&mut self) {
         let dom = Asset::new(AssetClass::Domestic, 
-                             self.get_asset_share(AssetClass::Domestic));
+                             self.get_asset_share(&AssetClass::Domestic));
         let int = Asset::new(AssetClass::International, 
-                             self.get_asset_share(AssetClass::International));
+                             self.get_asset_share(&AssetClass::International));
         let bnd = Asset::new(AssetClass::Bond, 
-                             self.get_asset_share(AssetClass::Bond));
+                             self.get_asset_share(&AssetClass::Bond));
         //let cds = Asset::new(AssetClass::Cd, 
                              //self.get_asset_share(AssetClass::Cd));
         let rle = Asset::new(AssetClass::RealEstate, 
-                             self.get_asset_share(AssetClass::RealEstate));
+                             self.get_asset_share(&AssetClass::RealEstate));
 
         let mut cur = Account::new(AccountType::Allocation);
         cur.add_asset(dom);
@@ -275,6 +275,7 @@ impl Account {
         }
         return mult;
     }
+
     fn get_asset_value(&self, class: AssetClass) -> f64 {
         let mut x = 0.0;
         for i in &self.assets {
@@ -304,6 +305,44 @@ impl Account {
         }
         self.assets.push(asset)
     }
+
+    fn remove_asset(&mut self, asset: &Asset) -> Result<(), String> {
+        for i in &mut self.assets {
+            if i.class == asset.class {
+                if i.value >= asset.value {
+                    i.value -= asset.value;
+                    return Ok(());
+                } else {
+                    return Err(format!("Account only contains ${} of {}", i.value, i.class)); 
+                }
+            }
+        }
+        return Err(format!("Account does not contain assets of type {}", asset.class));
+    }
+
+    fn move_asset_class_to(&mut self, other: &mut Account, class: &AssetClass) -> Result<(), String> {
+        let asset = Asset::new(class.clone(), self.get_asset_value(class.clone()));
+        let res = match self.remove_asset(&asset) {
+            Ok(()) => Ok(()),
+            Err(why) => Err(format!("Failed to move assets of type {}: {:?}", class.clone(), why)),
+        };
+        if res.is_ok() {
+            other.add_asset(asset);
+        }
+        res
+    }
+
+    fn move_asset(&mut self, other: &mut Account, asset: Asset) -> Result<(), String>{
+        let res = match self.remove_asset(&asset) {
+            Ok(()) => Ok(()),
+            Err(why) => Err(format!("Failed to move asset: {}", why)),
+        };
+        if res.is_ok() {
+            other.add_asset(asset);
+        }
+        res
+    }
+
 
     fn get_total_value(&self) -> f64 {
         let mut x = 0.0;
