@@ -18,7 +18,6 @@ enum AccountType {
     Traditional,
     Taxable,
     Roth,
-    Educational,
     Allocation,
 }
 
@@ -49,6 +48,17 @@ impl Asset {
         }
     }
 }
+
+// Naive way - don't account for current assets
+// calculate new asset amounts
+// 1. Total user value
+// 2. Multiply by target asset allocation
+// 3. Real Estate: Place in Roth. If Roth full then place in traditional. If traditional full then
+//    place in taxable.
+// 4. Bond: Place in traditional. If traditional full then place in roth. If roth full then place
+//    in taxable.
+// 5. Add together domestic and international. Fill accounts back to previous totals with half
+//    domestic and half international.
 
 impl User {
     fn new(fname: &str, lname: &str) -> User {
@@ -135,13 +145,11 @@ impl User {
         let mut tax = 0.0;
         let mut trad = 0.0;
         let mut roth = 0.0;
-        let mut edu = 0.0;
         for i in &self.accounts {
             match i.classification {
                 AccountType::Taxable => tax = tax + i.get_total_value(),
                 AccountType::Traditional => trad = trad + i.get_total_value(),
                 AccountType::Roth => roth += i.get_total_value(),
-                AccountType::Educational => edu += i.get_total_value(),
                 _ => continue,
             }
         }
@@ -149,7 +157,6 @@ impl User {
         disp.push_str(&format!("Taxable:        ${:>15}{:>8.2} %\n", tax.separated_string_with_fixed_place(2),  100.0*tax/self.get_total_value()));
         disp.push_str(&format!("Traditional:    ${:>15}{:>8.2} %\n", trad.separated_string_with_fixed_place(2), 100.0*trad/self.get_total_value()));
         disp.push_str(&format!("Roth:           ${:>15}{:>8.2} %\n", roth.separated_string_with_fixed_place(2), 100.0*roth/self.get_total_value()));
-        disp.push_str(&format!("Educational:    ${:>15}{:>8.2} %\n", edu.separated_string_with_fixed_place(2),  100.0*edu/self.get_total_value()));
         disp
     }
 
@@ -189,11 +196,6 @@ impl User {
         cur.add_asset(rle);
         self.allocation = cur;
     }
-
-    /*fn add_asset_with_priority(&mut self, src_acc: Account, val: f64, priority: Vec<AccountType>) -> Account {
-        println!("non-functional");
-        src_acc
-    }*/
 
     /*fn readd_asset_to_target(&mut self) {
 
@@ -343,6 +345,18 @@ impl Account {
         res
     }
 
+    fn swap_asset(&mut self, src: AssetClass, dst: AssetClass, amount: f64) -> Result<(), String> {
+        let old_asset = Asset::new(src, amount);
+        let res = match self.remove_asset(&old_asset) {
+            Ok(()) => Ok(()),
+            Err(why) => Err(format!("Failed to remove asset {}: {:?}", old_asset, why)),
+        };
+        let new_asset = Asset::new(dst, amount);
+        if res.is_ok() {
+            self.add_asset(new_asset);
+        }
+        res
+    }
 
     fn get_total_value(&self) -> f64 {
         let mut x = 0.0;
@@ -380,7 +394,6 @@ impl fmt::Display for AccountType {
             AccountType::Traditional => "IRA / 401(k)".fmt(f),
             AccountType::Roth => "Roth IRA / Roth 401(k)".fmt(f),
             AccountType::Taxable => "Brokerage Account".fmt(f),
-            AccountType::Educational => "529 / Educational".fmt(f),
             AccountType::Allocation => "Allocation".fmt(f),
         }
     }
@@ -627,7 +640,7 @@ fn request_allocation()-> Result<Account, String> {
 fn setup_new_account() -> Result<Account, String> {
     let account_type = loop {
         println!("What type of account would you like to setup?");
-        println!("1. Taxable\t2. Traditional/401(k)\t3. Roth/Roth 401(k)\t4. Educational\t5. Cancel");
+        println!("1. Taxable\t2. Traditional/401(k)\t3. Roth/Roth 401(k)\t4. Cancel");
         let mut account_type = String::new();
         io::stdin().read_line(&mut account_type)
             .expect("Failed to read line");
@@ -637,8 +650,7 @@ fn setup_new_account() -> Result<Account, String> {
             1 => break AccountType::Taxable,
             2 => break AccountType::Traditional,
             3 => break AccountType::Roth,
-            4 => break AccountType::Educational,
-            5 => return Err("Cancelled account creation".to_string()),
+            4 => return Err("Cancelled account creation".to_string()),
             _ => continue,
         }
     };
