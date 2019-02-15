@@ -47,6 +47,14 @@ impl Asset {
             value,
         }
     }
+
+    fn diff(&self, other: &Asset) -> Asset {
+        Asset::new(self.class.clone(), self.value - other.value)
+    }
+    
+    fn subtract_value(&mut self, val: f64) {
+        self.value -= val;
+    }
 }
 
 // Naive way - don't account for current assets
@@ -333,6 +341,27 @@ impl Account {
         }
         res
     }
+
+    // Add amount to account. If less than account limit then add asset. If more then return amount
+    // remaining
+    // TODO figure out how to get remainder out of function safely
+    fn add_to_limit(&mut self, asset: Asset, limit: f64) {
+        if self.fits(&asset, limit) {
+            self.add_asset(asset);
+            //return None;
+        } else {
+            let space_filler = Asset::new(asset.class.clone(), limit - self.get_total_value());
+            let leftover = asset.diff(&space_filler);
+            self.add_asset(space_filler);
+            //return Option(leftover);
+        }
+    }
+
+
+    fn fits(&self, asset: &Asset, limit: f64) -> bool {
+        asset.value <= limit - self.get_total_value()
+    }
+
 
     fn move_asset(&mut self, other: &mut Account, asset: Asset) -> Result<(), String>{
         let res = match self.remove_asset(&asset) {
