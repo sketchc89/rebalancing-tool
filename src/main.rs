@@ -4,7 +4,7 @@ use std::f64;
 use std::io;
 use std::io::Write;
 use std::fmt;
-mod enum_learning;
+//mod enum_learning;
 
 struct User {
     fname: String,
@@ -41,7 +41,48 @@ struct Asset {
     value: f64
 }
 
+/// Assets are considered equal if they share the same asset class
+///
+/// # Examples
+///
+/// ```
+/// let asset = Asset::new(AssetClass::Domestic, 100.00);
+/// let other = Asset::new(AssetClass::Domestic, 555.55);
+/// assert_eq!(asset, other);
+/// ```
+impl PartialEq for Asset {
+    fn eq(&self, other: &Asset) -> bool {
+        match (&self.class, &other.class) {
+            (AssetClass::Domestic, AssetClass::Domestic) => true,
+            (AssetClass::International, AssetClass::International) => true,
+            (AssetClass::Bond, AssetClass::Bond) => true,
+            (AssetClass::RealEstate, AssetClass::RealEstate) => true,
+            (_,_) => false,
+        }
+    }
+}
+/// Assets are considered equal to their asset class
+///
+/// # Examples
+///
+/// ```
+/// let asset = Asset::new(AssetClass::Domestic, 100.00);
+/// assert_eq!(asset, AssetClass::Domestic);
+/// ```
+impl PartialEq<AssetClass> for Asset {
+    fn eq(&self, other: &AssetClass) -> bool {
+        match (&self.class, other) {
+            (AssetClass::Domestic, AssetClass::Domestic) => true,
+            (AssetClass::International, AssetClass::International) => true,
+            (AssetClass::Bond, AssetClass::Bond) => true,
+            (AssetClass::RealEstate, AssetClass::RealEstate) => true,
+            (_,_) => false,
+        }
+    }
+}
+
 impl Asset {
+    /// Creates an Asset given an AssetClass and the amount of money invested in that Asset
     fn new(class: AssetClass, value: f64) -> Asset {
         Asset {
             class,
@@ -49,10 +90,34 @@ impl Asset {
         }
     }
 
-    fn diff(&self, other: &Asset) -> Asset {
-        Asset::new(self.class.clone(), self.value - other.value)
+    /// Subtracts another asset of the same class from the asset
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// let asset = Asset::new(AssetClass::Domestic, 50.0);
+    /// let other = Asset::new(AssetClass::Domestic, 10.0);
+    /// let actual = asset.subtract_asset(other);
+    /// assert_eq!(actual, Asset::new(AssetClass::Domestic, 40.0);
+    /// ```
+    fn subtract_asset(&self, other: &Asset) -> Option<Asset> {
+        if self == other {
+            Some(Asset::new(self.class.clone(), self.value - other.value))
+        }
+        else {
+            None
+        }
     }
-    
+
+    /// Subtracts value from asset
+    /// # Examples
+    ///
+    /// ```
+    /// let asset = Asset::new(AssetClass::Domestic, 50.0);
+    /// let val = 10.0;
+    /// let actual = asset.subtract_value(val);
+    /// assert_eq!(actual, Asset::new(AssetClass::Domestic, 40.0);
+    /// ```
     fn subtract_value(&mut self, val: f64) {
         self.value -= val;
     }
@@ -70,6 +135,7 @@ impl Asset {
 //    domestic and half international.
 
 impl User {
+    /// Creates a new user given a first name and last name
     fn new(fname: &str, lname: &str) -> User {
         User {
             fname: fname.to_string(),
@@ -79,14 +145,26 @@ impl User {
             target: Account::new(AccountType::Allocation),
         }
     }
+
+    /// Adds an account to users set of accounts, then recalculates the users account and asset allocation
     fn add_account(&mut self, account: Account) {
         self.accounts.push(account);
         self.current_allocation();
     }
-    fn target_allocation(&mut self, allocation: Account) {
-        self.target = allocation;
+
+    /// Sets a users target allocation to match the given account. 
+    /// The account must have a value of 100.00
+    fn target_allocation(&mut self, allocation: Account) -> Result<(), String> {
+        let total = allocation.get_total_value();
+        if total == 100.00 {
+            self.target = allocation;
+            Ok(())
+        } else {
+            Err(format!("Allocation should be 100.00, but was {}", total))
+        }
     }
 
+    /// Ask user of the program what action they would like to perform for the User
     fn request_action(&mut self) {
         loop {
             println!("What would you like to do?");
@@ -97,7 +175,10 @@ impl User {
             let choice: u8 = action.trim().parse().unwrap_or(0);
             match choice {
                 1 => match request_allocation() {
-                    Ok(allocation) => self.target_allocation(allocation),
+                    Ok(allocation) => match self.target_allocation(allocation) {
+                        Ok(()) => println!("Successfully set target allocation"),
+                        Err(why) => println!("{:?}", why),
+                    }
                     Err(why) => println!("{}", why)
                 }
                 2 => match setup_new_account() {
@@ -113,6 +194,9 @@ impl User {
         }
     }
 
+    /// Displays the difference between the current asset allocation of the user and their target.
+    /// Positive indicates the user needs to increase the value of those assets to meet their target
+    /// Negative indicates the user needs to reduce the value of those assets to meet their target.
     fn display_allocation_diff(&mut self) {
         loop {
             println!("In (1) $ or (2) % ?");
@@ -134,23 +218,17 @@ impl User {
         }
     }
 
+    /// Returns the total combined value of all of the user's accounts 
     fn get_total_value(&self) -> f64 {
-        let mut dom = 0.0;
-        let mut int = 0.0;
-        let mut bnd = 0.0;
-        //let mut cds = 0.0;
-        let mut rle = 0.0;
+        let mut total = 0.0;
         for i in &self.accounts {
-            dom += i.get_asset_value(AssetClass::Domestic);
-            int += i.get_asset_value(AssetClass::International);
-            bnd += i.get_asset_value(AssetClass::Bond);
-            //cds += i.get_asset_value(AssetClass::Cd);
-            rle += i.get_asset_value(AssetClass::RealEstate);
+            total += i.get_total_value();
         }
-        return dom + int + bnd + rle; //+ cds 
+        return total;
     }
 
-    fn account_breakdown_display(&self) -> String {
+    /// Display the account allocation of the user
+    fn display_account_allocation(&self) -> String {
         let mut tax = 0.0;
         let mut trad = 0.0;
         let mut roth = 0.0;
@@ -170,15 +248,15 @@ impl User {
     }
 
     fn get_asset_value(&self, class: &AssetClass) -> f64 {
-        let mut tot = 0.0;
-        for i in &self.accounts {
-            for j in &i.assets {
-                if j.class == *class {
-                    tot += j.value;
+        let mut value = 0.0;
+        for account in &self.accounts {
+            for asset in &account.assets {
+                if asset == class {
+                    value += asset.value;
                 }
             }
         }
-        return tot;
+        return value;
     }
 
     fn get_asset_share(&self, class: &AssetClass) -> f64 {
@@ -193,7 +271,7 @@ impl User {
         let bnd = Asset::new(AssetClass::Bond, 
                              self.get_asset_share(&AssetClass::Bond));
         //let cds = Asset::new(AssetClass::Cd, 
-                             //self.get_asset_share(AssetClass::Cd));
+        //self.get_asset_share(AssetClass::Cd));
         let rle = Asset::new(AssetClass::RealEstate, 
                              self.get_asset_share(&AssetClass::RealEstate));
 
@@ -205,35 +283,28 @@ impl User {
         cur.add_asset(rle);
         self.allocation = cur;
     }
+}
 
-    /*fn readd_asset_to_target(&mut self) {
+impl PartialEq for Account {
+    fn eq(&self, other: &Account) -> bool {
+        match (&self.classification, &other.classification) {
+            (AccountType::Taxable, AccountType::Taxable) => true,
+            (AccountType::Traditional, AccountType::Traditional) => true,
+            (AccountType::Roth, AccountType::Roth) => true,
+            (_,_) => false,
+        }
+    }
+}
 
-        let target_account = self.target;
-        println!("{}", target_account);
-
-        let rel_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Traditional, AccountType::Educational, AccountType::Taxable];
-        let bnd_priority: Vec<AccountType> = vec![AccountType::Educational, AccountType::Traditional, AccountType::Roth, AccountType::Taxable];
-        //let cds_priority: Vec<AccountType> = vec![AccountType::Educational, AccountType::Traditional, AccountType::Roth, AccountType::Taxable];
-        let dom_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Taxable, AccountType::Educational, AccountType::Traditional];
-        let int_priority: Vec<AccountType> = vec![AccountType::Roth, AccountType::Taxable, AccountType::Educational, AccountType::Traditional];
-        let target_rel = target_account.get_asset_value(AssetClass::RealEstate);
-        let target_bnd = target_account.get_asset_value(AssetClass::Bond);
-        let target_dom = target_account.get_asset_value(AssetClass::Bond);
-        let target_int = target_account.get_asset_value(AssetClass::Bond);
-
-        // first add_asset real estate
-        let target_account = self.add_asset_with_priority(target_account, target_rel, rel_priority);
-        
-        // next add_asset bonds
-        let target_account = self.add_asset_with_priority(target_account, target_bnd, bnd_priority); 
-
-        // next add_asset domestic
-        let target_account = self.add_asset_with_priority(target_account, target_dom, int_priority);
-
-        // next add_asset international
-        let target_account = self.add_asset_with_priority(target_account, target_int, dom_priority);
-    }*/
-
+impl PartialEq<AccountType> for Account {
+    fn eq(&self, other: &AccountType) -> bool {
+        match (&self.classification, other) {
+            (AccountType::Taxable, AccountType::Taxable) => true,
+            (AccountType::Traditional, AccountType::Traditional) => true,
+            (AccountType::Roth, AccountType::Roth) => true,
+            (_,_) => false,
+        }
+    }
 }
 
 impl Account {
@@ -241,9 +312,9 @@ impl Account {
         Account { 
             classification,
             assets: vec![Asset::new(AssetClass::Domestic, 0.0),
-                         Asset::new(AssetClass::International, 0.0),
-                         Asset::new(AssetClass::Bond, 0.0),
-                         Asset::new(AssetClass::RealEstate, 0.0)]
+            Asset::new(AssetClass::International, 0.0),
+            Asset::new(AssetClass::Bond, 0.0),
+            Asset::new(AssetClass::RealEstate, 0.0)]
         }
     }
 
@@ -257,16 +328,8 @@ impl Account {
         let mut diff = Account::new(classification);
         for i in &self.assets {
             for j in &other.assets {
-                match (&i.class, &j.class) {
-                    (AssetClass::Domestic, AssetClass::Domestic) => 
-                        diff.add_asset(Asset::new(AssetClass::Domestic, i.value - j.value)),
-                    (AssetClass::International, AssetClass::International) => 
-                        diff.add_asset(Asset::new(AssetClass::International, i.value - j.value)),
-                    (AssetClass::Bond, AssetClass::Bond) => 
-                        diff.add_asset(Asset::new(AssetClass::Bond, i.value - j.value)),
-                    (AssetClass::RealEstate, AssetClass::RealEstate) => 
-                        diff.add_asset(Asset::new(AssetClass::RealEstate, i.value - j.value)),
-                    (_,__) => continue,
+                if i == j {
+                    diff.add_asset(Asset::new(i.class.clone(), i.value - j.value));
                 }
             }
         }
@@ -288,47 +351,37 @@ impl Account {
     }
 
     fn get_asset_value(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
+        let mut value = 0.0;
+        for asset in &self.assets {
+            if asset == &class {
+                value += asset.value;
             }
         }
-        return x;
+        return value;
     }
 
-    /*fn get_asset_share(&self, class: AssetClass) -> f64 {
-        let mut x = 0.0;
-        for i in &self.assets {
-            if i.class == class {
-                x = x + i.value;
-            }
-        }
-        return 100.0*x / self.get_total_value();
-    }*/
-
-    fn add_asset(&mut self, asset: Asset) {
-        for i in &mut self.assets {
-            if i.class == asset.class {
-                i.value = i.value + asset.value;
+    fn add_asset(&mut self, new_asset: Asset) {
+        for asset in &mut self.assets {
+            if &new_asset == asset {
+                asset.value += new_asset.value;
                 return;
             }
         }
-        self.assets.push(asset)
+        self.assets.push(new_asset)
     }
 
-    fn remove_asset(&mut self, asset: &Asset) -> Result<(), String> {
-        for i in &mut self.assets {
-            if i.class == asset.class {
-                if i.value >= asset.value {
-                    i.value -= asset.value;
+    fn remove_asset(&mut self, unwanted_asset: &Asset) -> Result<(), String> {
+        for asset in &mut self.assets {
+            if asset == unwanted_asset {
+                if asset.value >= unwanted_asset.value {
+                    asset.value -= unwanted_asset.value;
                     return Ok(());
                 } else {
-                    return Err(format!("Account only contains ${} of {}", i.value, i.class)); 
+                    return Err(format!("Account only contains ${} of {}", asset.value, asset.class)); 
                 }
             }
         }
-        return Err(format!("Account does not contain assets of type {}", asset.class));
+        return Err(format!("Account does not contain assets of type {}", unwanted_asset.class));
     }
 
     fn move_asset_class_to(&mut self, other: &mut Account, class: &AssetClass) -> Result<(), String> {
@@ -351,7 +404,10 @@ impl Account {
             None
         } else {
             let space_filler = Asset::new(asset.class.clone(), limit - self.get_total_value());
-            let leftover = asset.diff(&space_filler);
+            let leftover = match asset.subtract_asset(&space_filler) {
+                Some(asset) => asset,
+                None => panic!("Adding to limit failed because asset types did not match"),
+            };
             self.add_asset(space_filler);
             Some(leftover)
         }
@@ -394,9 +450,6 @@ impl Account {
         }
         return x;
     }
-    /*fn is_empty(&self) -> bool {
-        return self.get_total_value == 0;
-    }*/
 }
 
 
@@ -412,11 +465,11 @@ impl fmt::Display for AssetClass {
     }
 }
 
-impl fmt::Display for Asset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &format!("Asset Class: {:<15}{:>12}", self.class, self.value.separated_string_with_fixed_place(2)))
-    }
-}
+            impl fmt::Display for Asset {
+                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    write!(f, "{}", &format!("Asset Class: {:<15}{:>12}", self.class, self.value.separated_string_with_fixed_place(2)))
+                }
+            }
 impl fmt::Display for AccountType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
@@ -453,7 +506,7 @@ impl fmt::Display for User {
         }
         disp.push_str(&format!("Target {}\n", self.target));
         disp.push_str(&format!("Current {}\n", self.allocation));
-        disp.push_str(&format!("{}", self.account_breakdown_display()));
+        disp.push_str(&format!("{}", self.display_account_allocation()));
         disp.fmt(f)
     }
 }
@@ -546,81 +599,81 @@ fn check_account_is_not_empty() {
 }
 
 /*#[test]
-fn desired_asset_allocation_sums_to_100() {
-    let mut target_allocation = Account::new();
-    let dom = Asset {
-        class: AssetClass::Domestic,
-        value: 35.0,
-    };
-    let intl = Asset {
-        class: AssetClass::International,
-        value: 25.0,
-    };
-    let bond = Asset {
-        class: AssetClass::Bond,
-        value: 40.0,
-    };
-    target_allocation.add_asset(dom);
-    target_allocation.add_asset(intl);
-    target_allocation.add_asset(bond);
-    match target_allocation.is_valid_allocation() {
-        Ordering::Equal => assert!(true),
-        Ordering::Less => panic!("Account sums to 100 but returned less"),
-        Ordering::Greater => panic!("Account sums to 100 but returned greater"),
-    }
-}*/
+  fn desired_asset_allocation_sums_to_100() {
+  let mut target_allocation = Account::new();
+  let dom = Asset {
+  class: AssetClass::Domestic,
+  value: 35.0,
+  };
+  let intl = Asset {
+  class: AssetClass::International,
+  value: 25.0,
+  };
+  let bond = Asset {
+  class: AssetClass::Bond,
+  value: 40.0,
+  };
+  target_allocation.add_asset(dom);
+  target_allocation.add_asset(intl);
+  target_allocation.add_asset(bond);
+  match target_allocation.is_valid_allocation() {
+  Ordering::Equal => assert!(true),
+  Ordering::Less => panic!("Account sums to 100 but returned less"),
+  Ordering::Greater => panic!("Account sums to 100 but returned greater"),
+  }
+  }*/
 
 /*#[test]
-fn allocation_complains_if_assets_dont_sum_to_100() {
-    let mut target_allocation = Account::new();
-    let dom = Asset {
-        class: AssetClass::Domestic,
-        value: 1.0,
-    };
-    let intl = Asset {
-        class: AssetClass::International,
-        value: 2.0,
-    };
-    let bond = Asset {
-        class: AssetClass::Bond,
-        value: 3.0,
-    };
-    target_allocation.add_asset(dom);
-    target_allocation.add_asset(intl);
-    target_allocation.add_asset(bond);
+  fn allocation_complains_if_assets_dont_sum_to_100() {
+  let mut target_allocation = Account::new();
+  let dom = Asset {
+  class: AssetClass::Domestic,
+  value: 1.0,
+  };
+  let intl = Asset {
+  class: AssetClass::International,
+  value: 2.0,
+  };
+  let bond = Asset {
+  class: AssetClass::Bond,
+  value: 3.0,
+  };
+  target_allocation.add_asset(dom);
+  target_allocation.add_asset(intl);
+  target_allocation.add_asset(bond);
 
-    match target_allocation.is_valid_allocation() {
-        Ordering::Equal => panic!("Account should be less than 100 but returned equal"),
-        Ordering::Less => assert!(true),
-        Ordering::Greater => panic!("Account should be less than 100 but returned greater"),
-    }
-}*/
+  match target_allocation.is_valid_allocation() {
+  Ordering::Equal => panic!("Account should be less than 100 but returned equal"),
+  Ordering::Less => assert!(true),
+  Ordering::Greater => panic!("Account should be less than 100 but returned greater"),
+  }
+  }*/
 
 /*#[test]
-fn allocation_says_whether_over_100() {
-    let mut target_allocation = Account::new();
-    let dom = Asset {
-        class: AssetClass::Domestic,
-        value: 100.0,
-    };
-    let intl = Asset {
-        class: AssetClass::International,
-        value: 200.0,
-    };
-    let bond = Asset {
-        class: AssetClass::Bond,
-        value: 300.0,
-    };
-    target_allocation.add_asset(dom);
-    target_allocation.add_asset(intl);
-    target_allocation.add_asset(bond);
+  fn allocation_says_whether_over_100() {
+  let mut target_allocation = Account::new();
+  let dom = Asset {
+  class: AssetClass::Domestic,
+  value: 100.0,
+  };
+  let intl = Asset {
+  class: AssetClass::International,
+  value: 200.0,
+  };
+  let bond = Asset {
+  class: AssetClass::Bond,
+  value: 300.0,
+  };
+  target_allocation.add_asset(dom);
+  target_allocation.add_asset(intl);
+  target_allocation.add_asset(bond);
 
-    match target_allocation.is_valid_allocation() {
-        Ordering::Equal => panic!("Account is greater than 100 but returned equal"),
-        Ordering::Greater => assert!(true),
-        Ordering::Less => panic!("Account is less than 100 but returned less"),
-    }
-}*/
+  match target_allocation.is_valid_allocation() {
+  Ordering::Equal => panic!("Account is greater than 100 but returned equal"),
+  Ordering::Greater => assert!(true),
+  Ordering::Less => panic!("Account is less than 100 but returned less"),
+  }
+  }*/
 
 fn request_allocation()-> Result<Account, String> {
     let mut allocation = Account::new(AccountType::Allocation);
@@ -646,11 +699,11 @@ fn request_allocation()-> Result<Account, String> {
         let value: f64 = value.trim().parse().unwrap_or(0.0);
         println!("\n");
         match class {
-                1 => allocation.add_asset(Asset::new(AssetClass::Domestic, value)),
-                2 => allocation.add_asset(Asset::new(AssetClass::International, value)),
-                3 => allocation.add_asset(Asset::new(AssetClass::Bond, value)),
-                4 => allocation.add_asset(Asset::new(AssetClass::RealEstate, value)),
-                _ => continue,
+            1 => allocation.add_asset(Asset::new(AssetClass::Domestic, value)),
+            2 => allocation.add_asset(Asset::new(AssetClass::International, value)),
+            3 => allocation.add_asset(Asset::new(AssetClass::Bond, value)),
+            4 => allocation.add_asset(Asset::new(AssetClass::RealEstate, value)),
+            _ => continue,
         }
         let total = allocation.get_total_value();
         if total < 100.0 {
@@ -725,34 +778,34 @@ fn setup_account(account_type: AccountType) -> Result<Account, String> {
     return Ok(account);
 }
 
-fn parse_portfolio_value
-    (value: &str) 
+    fn parse_portfolio_value
+(value: &str) 
     -> Result<f64, &str> {
-    let value: f64 = value.trim().parse().unwrap_or(-1.0);
-    if value > 0.0 {
-        Ok((value*100.0).round()/100.0)
-    } else {
-        Err("Input must be a positive number")
+        let value: f64 = value.trim().parse().unwrap_or(-1.0);
+        if value > 0.0 {
+            Ok((value*100.0).round()/100.0)
+        } else {
+            Err("Input must be a positive number")
+        }
     }
-}
 
 /*fn get_portfolio_value (name: &str) -> f64 {
-    let value:f64 = loop {
-        print!("Input the value of your {} investment account: ", name);
-        io::stdout().flush().unwrap();
-        let mut val = String::new();
-        io::stdin().read_line(&mut val)
-            .expect("Failed to read line");
-        match parse_portfolio_value(&val) {
-            Ok(num) => break num,
-            Err(_) => {
-                println!("Invalid input.");
-                continue;
-            }
-        };
-    };
-    return value;
-}*/
+  let value:f64 = loop {
+  print!("Input the value of your {} investment account: ", name);
+  io::stdout().flush().unwrap();
+  let mut val = String::new();
+  io::stdin().read_line(&mut val)
+  .expect("Failed to read line");
+  match parse_portfolio_value(&val) {
+  Ok(num) => break num,
+  Err(_) => {
+  println!("Invalid input.");
+  continue;
+  }
+  };
+  };
+  return value;
+  }*/
 
 fn get_string (descriptor: &str) -> String {
     print!("Input the value of your {}: ", descriptor);
@@ -766,7 +819,7 @@ fn get_string (descriptor: &str) -> String {
 fn main() {
 
     //println!("{}", &format!("{:a^20}", AssetClass::Domestic));
-    
+
     let first = get_string("first name");
     let last = get_string("last name");
     let mut user = User::new(&first, &last);
