@@ -344,16 +344,15 @@ impl Account {
 
     // Add amount to account. If less than account limit then add asset. If more then return amount
     // remaining
-    // TODO figure out how to get remainder out of function safely
-    fn add_to_limit(&mut self, asset: Asset, limit: f64) {
+    fn add_to_limit(&mut self, asset: Asset, limit: f64) -> Option<Asset> {
         if self.fits(&asset, limit) {
             self.add_asset(asset);
-            //return None;
+            None
         } else {
             let space_filler = Asset::new(asset.class.clone(), limit - self.get_total_value());
             let leftover = asset.diff(&space_filler);
             self.add_asset(space_filler);
-            //return Option(leftover);
+            Some(leftover)
         }
     }
 
