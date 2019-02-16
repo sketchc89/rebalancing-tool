@@ -97,7 +97,8 @@ impl User {
                 .expect("Failed to read line");
             let choice: u8 = choice.trim().parse().unwrap_or(0);
             let mut diff = self.allocation.diff(&self.target); 
-            println!("The user's accounts differ from the target allocation by: (+) too high, (-) too low");
+            println!("The user's accounts differ from the target allocation by: ");
+            println!("(+) too high, need to take some out, (-) too low, need to add some");
             match choice {
                 1 => { diff.change_account_classification(AccountType::Taxable);
                     println!("{}", diff.multiply(0.01*self.get_total_value())); 
