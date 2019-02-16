@@ -4,6 +4,7 @@ use std::f64;
 use std::io;
 use std::io::Write;
 use std::fmt;
+mod enum_learning;
 
 struct User {
     fname: String,
